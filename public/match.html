@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Match en cours</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 0; }
+    header {
+      position: sticky; top: 0;
+      background: #333; color: #fff;
+      padding: 1rem; display: flex; gap: 1rem;
+    }
+    header a {
+      color: #fff; text-decoration: none;
+    }
+    .player-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      padding: 1rem;
+      gap: 0.5rem;
+    }
+    .player-button {
+      padding: 0.5rem 1rem;
+      border: 1px solid #aaa;
+      background: #f0f0f0;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .player-button.active {
+      background: #4CAF50;
+      color: white;
+      font-weight: bold;
+    }
+    .score-controls {
+      padding: 1rem;
+      display: none;
+    }
+    .score-controls.active {
+      display: block;
+    }
+    .score-controls button {
+      font-size: 1.5rem;
+      padding: 1rem;
+      margin-right: 1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .success { background: #4CAF50; color: white; }
+    .fail { background: #f44336; color: white; }
+  </style>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <header>
+    <a href="/">🏠 Accueil</a>
+    <a href="/players.html">👥 Participants</a>
+  </header>
+
+  <div class="player-buttons" id="playerButtons"></div>
+
+  <div class="score-controls" id="scoreControls">
+    <h2 id="activePlayerName"></h2>
+    <button class="success">✅ Point</button>
+    <button class="fail">❌ Manqué</button>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const matchId = urlParams.get('id');
+    const socket = io();
+
+    const playerButtonsDiv = document.getElementById('playerButtons');
+    const scoreControls = document.getElementById('scoreControls');
+    const activePlayerName = document.getElementById('activePlayerName');
+
+    let activePlayerId = null;
+    let players = [];
+
+    // Demande la liste des joueurs pour ce match
+    socket.emit('get_match_players', matchId);
+
+    socket.on('match_players', ({ matchId: receivedId, players: playerList }) => {
+      if (receivedId !== matchId) return; // Ignore les réponses pour d'autres matchs
+      players = playerList;
+      renderPlayerButtons();
+    });
+
+    socket.on('match_players_updated', ({ matchId: updatedId, players: updatedPlayers }) => {
+      if (updatedId !== matchId) return;
+      players = updatedPlayers.map(name => ({ id: name, name }));
+      renderPlayerButtons();
+    });
+
+    function renderPlayerButtons() {
+      playerButtonsDiv.innerHTML = '';
+      players.sort((a, b) => a.name.localeCompare(b.name));
+      players.forEach(player => {
+        const btn = document.createElement('button');
+        btn.textContent = player.name;
+        btn.className = 'player-button';
+        if (player.id === activePlayerId) {
+          btn.classList.add('active');
+        }
+        btn.onclick = () => {
+          if (activePlayerId === player.id) {
+            activePlayerId = null;
+            scoreControls.classList.remove('active');
+          } else {
+            activePlayerId = player.id;
+            activePlayerName.textContent = player.name;
+            scoreControls.classList.add('active');
+          }
+          renderPlayerButtons();
+        };
+        playerButtonsDiv.appendChild(btn);
+      });
+    }
+  </script>
+</body>
+</html>

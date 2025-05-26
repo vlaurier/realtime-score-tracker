@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ajouter un joueur</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/notify.js"></script>
+</head>
+<body>
+  <nav style="position:sticky;top:0;background:#f8f8f8;border-bottom:1px solid #ddd;padding:0.5rem 1rem;display:flex;gap:1rem;">
+    <a href="/" title="Accueil" style="text-decoration:none;font-size:1.5rem;">🏠</a>
+    <a href="/players.html" title="Participants" style="text-decoration:none;font-size:1.5rem;">👤</a>
+  </nav>
+
+  <h1>Ajouter un joueur au match</h1>
+  <form id="addToMatchForm">
+    <label for="playerSelect">Choisir un participant :</label>
+    <select id="playerSelect" required></select>
+    <button type="submit">Ajouter</button>
+  </form>
+
+  <p><a href="/">Annuler</a></p>
+
+  <script>
+    const socket = io();
+    const urlParams = new URLSearchParams(window.location.search);
+    const matchId = urlParams.get('id');
+    const form = document.getElementById('addToMatchForm');
+    const select = document.getElementById('playerSelect');
+
+    if (!matchId) {
+      alert("Aucun match spécifié.");
+      window.location.href = "/";
+    }
+
+    socket.on('players_updated', (players) => {
+      select.innerHTML = '';
+      players.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        select.appendChild(option);
+      });
+    });
+
+    socket.emit('get_players');
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const selectedPlayer = select.value;
+      if (selectedPlayer) {
+        socket.emit('add_player_to_match', {
+          matchId,
+          playerName: selectedPlayer
+        }, () => {
+          showNotification(`${selectedPlayer} a été ajouté au match`);
+          requestAnimationFrame(() => {
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 2500);
+          });
+        });
+      }
+    });
+  </script>
+</body>
+</html>

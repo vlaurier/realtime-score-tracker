@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Suivi Matchs</title>
+  <style>
+    body { font-family: sans-serif; padding: 1rem; }
+
+    nav {
+      position: sticky;
+      top: 0;
+      background-color: #f8f8f8;
+      border-bottom: 1px solid #ddd;
+      padding: 0.5rem 1rem;
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    nav a {
+      text-decoration: none;
+      font-size: 1.5rem;
+    }
+
+    input, button {
+      margin: 0.5rem 0;
+      padding: 0.4rem;
+    }
+
+    #notification {
+      display: none;
+      background: #d4edda;
+      color: #155724;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border: 1px solid #c3e6cb;
+      border-radius: 5px;
+      font-weight: bold;
+      transition: opacity 1s ease;
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="/" title="Accueil">🏠</a>
+    <a href="/players.html" title="Participants">👤</a>
+  </nav>
+
+  <div id="notification"></div>
+
+  <h1>Créer un match</h1>
+  <input type="text" id="match-name" placeholder="Nom du match" />
+  <input type="number" id="duration" placeholder="Durée (min)" />
+  <button onclick="createMatch()">Créer</button>
+
+  <h2>Liste des matchs</h2>
+  <ul id="match-list"></ul>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/notify.js"></script>
+  <script>
+    const socket = io();
+
+    const matchList = document.getElementById('match-list');
+    const notification = document.getElementById('notification');
+
+    // Récupération des paramètres d'URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const player = urlParams.get('player');
+    const match = urlParams.get('match');
+
+    let matchIdToName = {};
+    let matchPlayers = {};
+    let pendingMatchPlayerRequests = 0;
+    let pendingMatches = [];
+
+    function createMatch() {
+      const name = document.getElementById('match-name').value;
+      const duration = parseInt(document.getElementById('duration').value);
+      if (name && duration) {
+        socket.emit('create_match', {
+          name,
+          duration,
+          createdAt: new Date().toISOString(),
+        });
+      }
+    }
+
+    socket.on('player_added_to_match', ({ matchId, playerName }) => {
+      const matchName = matchIdToName[matchId] || 'un match';
+      showNotification(`${playerName} a été ajouté à ${matchName}`);
+    });
+
+    socket.on('match_players_updated', ({ matchId, players }) => {
+      matchPlayers[matchId] = players;
+      renderMatches(); // une fonction dédiée pour réafficher la liste proprement
+    });
+
+    socket.on('match_players', ({ matchId, players }) => {
+      matchPlayers[matchId] = players.map(p => p.name);
+      pendingMatchPlayerRequests--;
+
+      if (pendingMatchPlayerRequests === 0) {
+        renderMatches(pendingMatches);
+      }
+    });
+
+    socket.on('matches', (matches) => {
+      matchIdToName = {};
+      matchPlayers = {};
+      pendingMatches = matches;
+      pendingMatchPlayerRequests = matches.length;
+
+      if (matches.length === 0) {
+        renderMatches([]);
+        return;
+      }
+
+      matches.forEach(match => {
+        matchIdToName[match.id] = match.name;
+        socket.emit('get_match_players', match.id);
+      });
+    });
+
+    function renderMatches(matches) {
+      matchList.innerHTML = '';
+
+      matches.forEach((match) => {
+        const li = document.createElement('li');
+
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = `${match.name} – ${match.duration} min`;
+        li.appendChild(nameSpan);
+
+        const viewBtn = document.createElement('button');
+        viewBtn.textContent = '👁️';
+        viewBtn.title = 'Voir le match';
+        viewBtn.style.marginLeft = '1rem';
+        viewBtn.onclick = () => {
+          window.location.href = `match.html?id=${match.id}`;
+        };
+        li.appendChild(viewBtn);
+
+        if (!match.started) {
+          const addPlayerBtn = document.createElement('button');
+          addPlayerBtn.textContent = '👤➕';
+          addPlayerBtn.title = 'Ajouter un joueur';
+          addPlayerBtn.style.marginLeft = '0.5rem';
+          addPlayerBtn.onclick = () => {
+            window.location.href = `add-player.html?id=${match.id}`;
+          };
+          li.appendChild(addPlayerBtn);
+
+          const deleteBtn = document.createElement('button');
+          deleteBtn.textContent = '🗑️';
+          deleteBtn.title = 'Supprimer le match';
+          deleteBtn.style.marginLeft = '0.5rem';
+          deleteBtn.onclick = () => {
+            if (confirm(`Supprimer le match "${match.name}" ?`)) {
+              socket.emit('delete_match', match.id);
+            }
+          };
+          li.appendChild(deleteBtn);
+        }
+
+        matchList.appendChild(li);
+
+        const players = matchPlayers[match.id] || [];
+        if (players.length > 0) {
+          const playerList = document.createElement('ul');
+          playerList.style.marginTop = '0.3rem';
+          players.forEach(p => {
+            const liPlayer = document.createElement('li');
+            liPlayer.textContent = p;
+            playerList.appendChild(liPlayer);
+          });
+          li.appendChild(playerList);
+        }
+      });
+    }
+  </script>
+</body>
+</html>
