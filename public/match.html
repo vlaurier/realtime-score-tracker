@@ -75,6 +75,24 @@
       opacity: 0.5;
       cursor: not-allowed;
     }
+
+    .player-action-temp {
+      color: #333;
+      opacity: 0.4;
+      font-weight: bold;
+      font-size: 1.2rem;
+      margin-left: 0.2rem;
+    }
+
+    .player-action-confirmed {
+      background-color: #2e7d32;
+      color: white;
+      font-weight: bold;
+      border-radius: 12px;
+      padding: 0.2rem 0.6rem;
+      margin-left: 0.3rem;
+      display: inline-block;
+    }
   </style>
   <script src="/socket.io/socket.io.js"></script>
 </head>
@@ -93,6 +111,20 @@
       🕒 00:00
     </button>
   </div>
+
+  <div id="autoFailNotice" style="
+    display: none;
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    padding: 1rem;
+    text-align: center;
+    margin: 1rem;
+    font-weight: bold;
+    border-radius: 8px;">
+    Si la série est arrêtée par le temps, retirer la dernière croix ajoutée automatiquement
+  </div>
+
 
   <div class="score-controls" id="scoreControls">
     <h2 id="activePlayerName"></h2>
@@ -116,7 +148,7 @@
     <button data-key="8">8</button>
     <button data-key="9">9</button>
     <button data-key="0">0</button>
-    <button data-key="fail" class="fail" style="grid-column: span 2;">❌</button>
+    <button data-key="fail" class="fail" id="failButton" style="grid-column: span 2;">❌</button>
   </div>
 
   <script>
@@ -130,6 +162,8 @@
     const countdownButton = document.getElementById('countdownButton');
     const correctionContainer = document.getElementById('correctionContainer');
     const undoButton = document.getElementById('undoButton');
+    const failButton = document.getElementById('failButton');
+    const autoFailNotice = document.getElementById('autoFailNotice');
 
     let activePlayerId = null;
     let players = [];
@@ -137,6 +171,8 @@
     let matchStartedAt = null;
     let matchDuration = null;
     let countdownInterval = null;
+    let numberBuffer = '';
+    let bufferTimer = null;
 
     const playerScores = {}; // { playerId: ['✅', '✅', '❌'] }
 
@@ -235,17 +271,40 @@
         }
 
         if (key === 'fail') {
+          // ❌ est immédiat, on vide le buffer
+          clearTimeout(bufferTimer);
+          numberBuffer = '';
           playerScores[activePlayerId].push('❌');
-        } else {
-          const count = parseInt(key);
+          renderPlayerActions();
+          return;
+        }
+
+        // Ajout d'un chiffre au buffer
+        numberBuffer += key;
+        renderPlayerActions(); // 🔁 pour montrer le buffer en direct
+
+        // Annule l’ancien timer
+        if (bufferTimer) clearTimeout(bufferTimer);
+
+        failButton.disabled = true;
+
+        // Démarre un nouveau timer de 2s pour valider la série
+        bufferTimer = setTimeout(() => {
+          const count = parseInt(numberBuffer);
           if (!isNaN(count) && count > 0) {
             for (let i = 0; i < count; i++) {
               playerScores[activePlayerId].push('✅');
             }
-          }
-        }
 
-        renderPlayerActions();
+            // ✅ Ajout automatique d'une ❌
+            playerScores[activePlayerId].push('❌');
+          }
+
+          numberBuffer = '';
+          bufferTimer = null;
+          failButton.disabled = false;
+          renderPlayerActions();
+        }, 2000);
       });
     });
 
@@ -270,13 +329,20 @@
       if (remaining <= 0) {
         clearInterval(countdownInterval);
         countdownButton.textContent = '⏰ Temps écoulé';
-        updateKeyboardEnabledState(); // désactive après match
+        updateKeyboardEnabledState();
+
+        // 🔴 Affiche la notice pendant 30s
+        autoFailNotice.style.display = 'block';
+        setTimeout(() => {
+          autoFailNotice.style.display = 'none';
+        }, 30000);
       }
     }
     function renderPlayerActions() {
       const container = document.getElementById('playerActions');
       if (!activePlayerId || !playerScores[activePlayerId]) {
         container.textContent = '';
+        correctionContainer.style.display = 'none';
         return;
       }
 
@@ -289,25 +355,25 @@
           streak++;
         } else if (entry === '❌') {
           if (streak > 0) {
-            chunks.push(`<span style="color: green; font-weight: bold;">${streak}</span>`);
+            chunks.push(`<span class="player-action-confirmed">${streak}</span>`);
             streak = 0;
           }
           chunks.push(`<span style="color: red;">❌</span>`);
         }
       });
 
-      // Fin de série si le dernier était une réussite
       if (streak > 0) {
-        chunks.push(`<span style="color: green; font-weight: bold;">${streak}</span>`);
+        chunks.push(`<span class="player-action-confirmed">${streak}</span>`);
+      }
+
+      // 🔍 Ajout du buffer visuel si présent
+      if (numberBuffer.length > 0) {
+        chunks.push(`<span class="player-action-temp">${numberBuffer}</span>`);
       }
 
       container.innerHTML = chunks.join(' ');
 
-      if (history.length > 0) {
-        correctionContainer.style.display = 'block';
-      } else {
-        correctionContainer.style.display = 'none';
-      }
+      correctionContainer.style.display = history.length > 0 ? 'block' : 'none';
     }
 
     undoButton.addEventListener('click', () => {
