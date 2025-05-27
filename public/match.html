@@ -38,16 +38,43 @@
     .score-controls.active {
       display: block;
     }
-    .score-controls button {
+
+    .numeric-keyboard {
+      display: grid;
+      grid-template-columns: repeat(3, 80px);
+      gap: 0.5rem;
+      justify-content: center;
+      margin-top: 1rem;
+    }
+
+    .numeric-keyboard button {
       font-size: 1.5rem;
       padding: 1rem;
-      margin-right: 1rem;
-      border: none;
-      border-radius: 6px;
+      border-radius: 8px;
+      border: 1px solid #aaa;
+      background: #f9f9f9;
       cursor: pointer;
+      transition: background 0.2s;
     }
-    .success { background: #4CAF50; color: white; }
-    .fail { background: #f44336; color: white; }
+
+    .numeric-keyboard button:hover {
+      background: #e0e0e0;
+    }
+
+    .numeric-keyboard .fail {
+      background: #f8d7da;
+      color: #721c24;
+      border-color: #f5c6cb;
+    }
+
+    .numeric-keyboard .fail:hover {
+      background: #f1b0b7;
+    }
+
+    .numeric-keyboard button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
   </style>
   <script src="/socket.io/socket.io.js"></script>
 </head>
@@ -59,10 +86,30 @@
 
   <div class="player-buttons" id="playerButtons"></div>
 
+  <div id="countdownContainer" style="text-align:center; margin: 2rem 0;">
+    <button id="countdownButton"
+            style="font-size: 3rem; padding: 1rem 2rem; cursor: not-allowed;"
+            disabled>
+      🕒 00:00
+    </button>
+  </div>
+
   <div class="score-controls" id="scoreControls">
     <h2 id="activePlayerName"></h2>
-    <button class="success">✅ Point</button>
-    <button class="fail">❌ Manqué</button>
+  </div>
+
+  <div class="numeric-keyboard" id="numericKeyboard" style="display: none;">
+    <button data-key="1">1</button>
+    <button data-key="2">2</button>
+    <button data-key="3">3</button>
+    <button data-key="4">4</button>
+    <button data-key="5">5</button>
+    <button data-key="6">6</button>
+    <button data-key="7">7</button>
+    <button data-key="8">8</button>
+    <button data-key="9">9</button>
+    <button data-key="0">0</button>
+    <button data-key="fail" class="fail" style="grid-column: span 2;">❌</button>
   </div>
 
   <script>
@@ -73,15 +120,23 @@
     const playerButtonsDiv = document.getElementById('playerButtons');
     const scoreControls = document.getElementById('scoreControls');
     const activePlayerName = document.getElementById('activePlayerName');
+    const countdownButton = document.getElementById('countdownButton');
 
     let activePlayerId = null;
     let players = [];
 
-    // Demande la liste des joueurs pour ce match
+    let matchStartedAt = null;
+    let matchDuration = null;
+    let countdownInterval = null;
+
+    // Initialement désactive tous les boutons du clavier
+    document.querySelectorAll('.numeric-keyboard button').forEach(btn => btn.disabled = true);
+
     socket.emit('get_match_players', matchId);
+    socket.emit('get_match_info', matchId);
 
     socket.on('match_players', ({ matchId: receivedId, players: playerList }) => {
-      if (receivedId !== matchId) return; // Ignore les réponses pour d'autres matchs
+      if (receivedId !== matchId) return;
       players = playerList;
       renderPlayerButtons();
     });
@@ -92,9 +147,27 @@
       renderPlayerButtons();
     });
 
+    socket.on('match_info', (match) => {
+      matchDuration = match.duration;
+      if (match.started && match.startedAt) {
+        matchStartedAt = match.startedAt;
+        startCountdown();
+      } else {
+        updateCountdownDisplay(match.duration * 60 * 1000);
+        enableCountdownButton();
+      }
+    });
+
+    socket.on('match_started', ({ matchId: startedId, startedAt }) => {
+      if (startedId !== matchId) return;
+      matchStartedAt = startedAt;
+      startCountdown();
+    });
+
     function renderPlayerButtons() {
       playerButtonsDiv.innerHTML = '';
       players.sort((a, b) => a.name.localeCompare(b.name));
+
       players.forEach(player => {
         const btn = document.createElement('button');
         btn.textContent = player.name;
@@ -106,15 +179,64 @@
           if (activePlayerId === player.id) {
             activePlayerId = null;
             scoreControls.classList.remove('active');
+            document.getElementById('numericKeyboard').style.display = 'none';
           } else {
             activePlayerId = player.id;
             activePlayerName.textContent = player.name;
             scoreControls.classList.add('active');
+            document.getElementById('numericKeyboard').style.display = 'grid';
+            updateKeyboardEnabledState();
           }
           renderPlayerButtons();
         };
         playerButtonsDiv.appendChild(btn);
       });
+    }
+
+    function enableCountdownButton() {
+      countdownButton.disabled = false;
+      countdownButton.style.cursor = 'pointer';
+      countdownButton.onclick = () => {
+        socket.emit('start_match', matchId);
+      };
+    }
+
+    function updateCountdownDisplay(msRemaining) {
+      const minutes = Math.floor(msRemaining / 60000);
+      const seconds = Math.floor((msRemaining % 60000) / 1000);
+      countdownButton.textContent = `🕒 ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    function updateKeyboardEnabledState() {
+      const isEnabled = matchStartedAt !== null;
+      document.querySelectorAll('.numeric-keyboard button').forEach(btn => {
+        btn.disabled = !isEnabled;
+      });
+    }
+
+    function startCountdown() {
+      countdownButton.disabled = true;
+      countdownButton.style.cursor = 'not-allowed';
+      updateCountdown();
+      countdownInterval = setInterval(updateCountdown, 1000);
+      updateKeyboardEnabledState();
+    }
+
+    function updateCountdown() {
+      const now = Date.now();
+      const end = matchStartedAt + matchDuration * 60 * 1000;
+      const remaining = Math.max(0, end - now);
+
+      const minutes = Math.floor(remaining / 60000);
+      const seconds = Math.floor((remaining % 60000) / 1000);
+
+      countdownButton.textContent = `🕒 ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+      if (remaining <= 0) {
+        clearInterval(countdownInterval);
+        countdownButton.textContent = '⏰ Temps écoulé';
+        updateKeyboardEnabledState(); // désactive après match
+      }
     }
   </script>
 </body>
