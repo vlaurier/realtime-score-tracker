@@ -96,6 +96,13 @@
 
   <div class="score-controls" id="scoreControls">
     <h2 id="activePlayerName"></h2>
+    <div id="playerActions" style="font-size: 1.5rem; margin-top: 1rem;"></div>
+    <div id="correctionContainer" style="margin-top: 1rem; display: none;">
+      <button id="undoButton"
+              style="padding: 0.5rem 1rem; font-size: 1rem; background: #eee; border: 1px solid #ccc; border-radius: 6px; cursor: pointer;">
+        🔙 Effacer la dernière saisie
+      </button>
+    </div>
   </div>
 
   <div class="numeric-keyboard" id="numericKeyboard" style="display: none;">
@@ -121,6 +128,8 @@
     const scoreControls = document.getElementById('scoreControls');
     const activePlayerName = document.getElementById('activePlayerName');
     const countdownButton = document.getElementById('countdownButton');
+    const correctionContainer = document.getElementById('correctionContainer');
+    const undoButton = document.getElementById('undoButton');
 
     let activePlayerId = null;
     let players = [];
@@ -128,6 +137,8 @@
     let matchStartedAt = null;
     let matchDuration = null;
     let countdownInterval = null;
+
+    const playerScores = {}; // { playerId: ['✅', '✅', '❌'] }
 
     // Initialement désactive tous les boutons du clavier
     document.querySelectorAll('.numeric-keyboard button').forEach(btn => btn.disabled = true);
@@ -214,6 +225,30 @@
       });
     }
 
+    document.querySelectorAll('.numeric-keyboard button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!activePlayerId) return;
+
+        const key = btn.dataset.key;
+        if (!playerScores[activePlayerId]) {
+          playerScores[activePlayerId] = [];
+        }
+
+        if (key === 'fail') {
+          playerScores[activePlayerId].push('❌');
+        } else {
+          const count = parseInt(key);
+          if (!isNaN(count) && count > 0) {
+            for (let i = 0; i < count; i++) {
+              playerScores[activePlayerId].push('✅');
+            }
+          }
+        }
+
+        renderPlayerActions();
+      });
+    });
+
     function startCountdown() {
       countdownButton.disabled = true;
       countdownButton.style.cursor = 'not-allowed';
@@ -238,6 +273,61 @@
         updateKeyboardEnabledState(); // désactive après match
       }
     }
+    function renderPlayerActions() {
+      const container = document.getElementById('playerActions');
+      if (!activePlayerId || !playerScores[activePlayerId]) {
+        container.textContent = '';
+        return;
+      }
+
+      const history = playerScores[activePlayerId];
+      const chunks = [];
+      let streak = 0;
+
+      history.forEach(entry => {
+        if (entry === '✅') {
+          streak++;
+        } else if (entry === '❌') {
+          if (streak > 0) {
+            chunks.push(`<span style="color: green; font-weight: bold;">${streak}</span>`);
+            streak = 0;
+          }
+          chunks.push(`<span style="color: red;">❌</span>`);
+        }
+      });
+
+      // Fin de série si le dernier était une réussite
+      if (streak > 0) {
+        chunks.push(`<span style="color: green; font-weight: bold;">${streak}</span>`);
+      }
+
+      container.innerHTML = chunks.join(' ');
+
+      if (history.length > 0) {
+        correctionContainer.style.display = 'block';
+      } else {
+        correctionContainer.style.display = 'none';
+      }
+    }
+
+    undoButton.addEventListener('click', () => {
+      if (!activePlayerId || !playerScores[activePlayerId] || playerScores[activePlayerId].length === 0) return;
+
+      const history = playerScores[activePlayerId];
+
+      if (history[history.length - 1] === '❌') {
+        // Dernier élément = échec
+        history.pop();
+      } else {
+        // Dernier élément = série de ✅ → on supprime jusqu’à rencontrer un ❌ ou début
+        while (history.length > 0 && history[history.length - 1] === '✅') {
+          history.pop();
+        }
+      }
+
+      renderPlayerActions();
+    });
+
   </script>
 </body>
 </html>
