@@ -112,6 +112,13 @@
     </button>
   </div>
 
+  <div id="finalizeContainer" style="text-align:center; margin: 1rem; display: none;">
+    <button id="finalizeButton"
+            style="padding: 1rem 2rem; font-size: 1.2rem; background: #333; color: white; border: none; border-radius: 6px; cursor: pointer;">
+      ✅ Valider les résultats
+    </button>
+  </div>
+
   <div id="scoreboard" style="margin: 2rem 1rem;">
     <h2>Classement temporaire</h2>
     <table id="scoreTable" style="border-collapse: collapse; width: 100%;">
@@ -179,10 +186,13 @@
     const undoButton = document.getElementById('undoButton');
     const failButton = document.getElementById('failButton');
     const autoFailNotice = document.getElementById('autoFailNotice');
+    const finalizeContainer = document.getElementById('finalizeContainer');
+    const finalizeButton = document.getElementById('finalizeButton');
 
     let activePlayerId = null;
     let players = [];
 
+    let matchFinished = false;
     let matchStartedAt = null;
     let matchDuration = null;
     let countdownInterval = null;
@@ -230,6 +240,12 @@
     socket.on('score_update', ({ matchId: receivedId, scores }) => {
       if (receivedId !== matchId) return;
       renderScoreboard(scores);
+    });
+
+    socket.on('match_finalized', ({ matchId: finalizedId }) => {
+      if (finalizedId !== matchId) return;
+      matchFinished = true;
+      disableInputsAfterFinalization();
     });
 
     function renderPlayerButtons() {
@@ -366,6 +382,7 @@
         autoFailNotice.style.display = 'block';
         setTimeout(() => {
           autoFailNotice.style.display = 'none';
+          finalizeContainer.style.display = 'block';
         }, 30000);
       }
     }
@@ -457,6 +474,20 @@
         tbody.appendChild(tr);
       });
     }
+
+    finalizeButton.addEventListener('click', () => {
+      if (confirm("Êtes-vous sûr de vouloir valider les résultats ? Cette action est irréversible.")) {
+        socket.emit('finalize_match', matchId);
+      }
+    });
+
+    function disableInputsAfterFinalization() {
+      finalizeContainer.style.display = 'none';
+      document.getElementById('numericKeyboard').style.display = 'none';
+      correctionContainer.style.display = 'none';
+      scoreControls.classList.remove('active');
+    }
+
   </script>
 </body>
 </html>

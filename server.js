@@ -9,7 +9,7 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 const matches = []; // Stockage temporaire en mémoire
-const players = [];
+const players = ["Alice", "Bob", "Charlie"];
 
 app.use(express.static('public'));
 
@@ -187,6 +187,14 @@ io.on('connection', (socket) => {
         matchId,
         scores
       });
+    });
+
+    socket.on('finalize_match', (matchId) => {
+      const match = matches.find(m => m.id === matchId);
+      if (!match || !match.started || match.finished) return;
+
+      match.finished = true;
+      io.emit('match_finalized', { matchId });
     });
 });
 
