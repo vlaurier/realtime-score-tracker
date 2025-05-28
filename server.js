@@ -196,6 +196,11 @@ io.on('connection', (socket) => {
       match.finished = true;
       io.emit('match_finalized', { matchId });
     });
+
+    socket.on('get_player_sequence', ({ matchId, playerId }) => {
+      const sequence = matchData[matchId]?.players?.[playerId] || [];
+      socket.emit('player_sequence_data', { matchId, playerId, sequence });
+    });
 });
 
 const PORT = 3000;

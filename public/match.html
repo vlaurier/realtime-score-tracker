@@ -248,6 +248,14 @@
       disableInputsAfterFinalization();
     });
 
+    socket.on('player_sequence_data', ({ matchId: mid, playerId, sequence }) => {
+      if (mid !== matchId) return;
+      playerScores[playerId] = [...sequence];
+      if (playerId === activePlayerId) {
+        renderPlayerActions();
+      }
+    });
+
     function renderPlayerButtons() {
       playerButtonsDiv.innerHTML = '';
       players.sort((a, b) => a.name.localeCompare(b.name));
@@ -260,6 +268,7 @@
           btn.classList.add('active');
         }
         btn.onclick = () => {
+          socket.emit('get_player_sequence', { matchId, playerId: player.id });
           if (activePlayerId === player.id) {
             activePlayerId = null;
             scoreControls.classList.remove('active');
@@ -313,6 +322,12 @@
           numberBuffer = '';
           playerScores[activePlayerId].push('❌');
           renderPlayerActions();
+            // 🔁 Envoi immédiat au serveur pour prise en compte
+          socket.emit('player_sequence', {
+            matchId,
+            playerId: activePlayerId,
+            sequence: ['❌']
+          });
           return;
         }
 
