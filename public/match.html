@@ -112,6 +112,21 @@
     </button>
   </div>
 
+  <div id="scoreboard" style="margin: 2rem 1rem;">
+    <h2>Classement temporaire</h2>
+    <table id="scoreTable" style="border-collapse: collapse; width: 100%;">
+      <thead>
+        <tr>
+          <th style="text-align:left;">#</th>
+          <th style="text-align:left;">Joueur</th>
+          <th style="text-align:right;">Score</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+
   <div id="autoFailNotice" style="
     display: none;
     background-color: #f8d7da;
@@ -181,6 +196,7 @@
 
     socket.emit('get_match_players', matchId);
     socket.emit('get_match_info', matchId);
+    socket.emit('join_match', matchId);
 
     socket.on('match_players', ({ matchId: receivedId, players: playerList }) => {
       if (receivedId !== matchId) return;
@@ -209,6 +225,11 @@
       if (startedId !== matchId) return;
       matchStartedAt = startedAt;
       startCountdown();
+    });
+
+    socket.on('score_update', ({ matchId: receivedId, scores }) => {
+      if (receivedId !== matchId) return;
+      renderScoreboard(scores);
     });
 
     function renderPlayerButtons() {
@@ -291,19 +312,29 @@
         // Démarre un nouveau timer de 2s pour valider la série
         bufferTimer = setTimeout(() => {
           const count = parseInt(numberBuffer);
+          const sequence = [];
           if (!isNaN(count) && count > 0) {
             for (let i = 0; i < count; i++) {
               playerScores[activePlayerId].push('✅');
+              sequence.push('✅');
             }
 
             // ✅ Ajout automatique d'une ❌
             playerScores[activePlayerId].push('❌');
+            sequence.push('❌');
           }
 
           numberBuffer = '';
           bufferTimer = null;
           failButton.disabled = false;
           renderPlayerActions();
+
+          // 🔁 Envoi au serveur
+          socket.emit('player_sequence', {
+            matchId,
+            playerId: activePlayerId,
+            sequence
+          });
         }, 2000);
       });
     });
@@ -390,10 +421,42 @@
           history.pop();
         }
       }
+      socket.emit('player_correction', {
+        matchId,
+        playerId: activePlayerId
+      });
 
       renderPlayerActions();
     });
 
+    function renderScoreboard(scores) {
+      const tbody = document.querySelector('#scoreTable tbody');
+      tbody.innerHTML = '';
+
+      // Convertir objet en tableau et trier par score décroissant
+      const sorted = Object.entries(scores)
+        .sort(([, a], [, b]) => b - a);
+
+      sorted.forEach(([player, score], index) => {
+        const tr = document.createElement('tr');
+
+        const rankTd = document.createElement('td');
+        rankTd.textContent = index + 1;
+
+        const nameTd = document.createElement('td');
+        nameTd.textContent = player;
+
+        const scoreTd = document.createElement('td');
+        scoreTd.textContent = score;
+        scoreTd.style.textAlign = 'right';
+
+        tr.appendChild(rankTd);
+        tr.appendChild(nameTd);
+        tr.appendChild(scoreTd);
+
+        tbody.appendChild(tr);
+      });
+    }
   </script>
 </body>
 </html>

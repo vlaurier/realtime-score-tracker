@@ -14,6 +14,7 @@ const players = [];
 app.use(express.static('public'));
 
 const matchPlayers = {}; // clé = matchId, valeur = tableau de noms
+const matchData = {}; // matchId → { players: { [playerId]: ['✅', '✅', '❌', ...] } }
 
 io.on('connection', (socket) => {
     console.log('🟢 Nouveau client connecté');
@@ -126,6 +127,67 @@ io.on('connection', (socket) => {
         console.log('🔴 Client déconnecté');
     });
 
+    socket.on('player_sequence', ({ matchId, playerId, sequence }) => {
+      if (!matchId || !playerId || !Array.isArray(sequence)) return;
+
+      if (!matchData[matchId]) {
+        matchData[matchId] = { players: {} };
+      }
+
+      if (!matchData[matchId].players[playerId]) {
+        matchData[matchId].players[playerId] = [];
+      }
+
+      // Ajoute la séquence au joueur
+      matchData[matchId].players[playerId].push(...sequence);
+
+      // 🧮 Calcul du score brut (nb de ✅)
+        const scores = {};
+        for (const [pid, seq] of Object.entries(matchData[matchId].players)) {
+          scores[pid] = seq.filter(a => a === '✅').length;
+        }
+
+        io.to(matchId).emit('score_update', {
+          matchId,
+          scores
+        });
+    });
+
+    socket.on('join_match', (matchId) => {
+      socket.join(matchId);
+    });
+
+    socket.on('player_correction', ({ matchId, playerId }) => {
+      if (!matchId || !playerId) return;
+
+      const currentMatch = matchData[matchId];
+      if (!currentMatch || !currentMatch.players[playerId]) return;
+
+      const sequence = currentMatch.players[playerId];
+
+      if (!sequence.length) return;
+
+      const last = sequence[sequence.length - 1];
+
+      if (last === '❌') {
+        sequence.pop();
+      } else if (last === '✅') {
+        while (sequence.length && sequence[sequence.length - 1] === '✅') {
+          sequence.pop();
+        }
+      }
+
+      // ✅ Corriger ici également (la ligne qui pose problème)
+      const scores = {};
+      for (const [pid, seq] of Object.entries(currentMatch.players)) {
+        scores[pid] = seq.filter(a => a === '✅').length;
+      }
+
+      io.to(matchId).emit('score_update', {
+        matchId,
+        scores
+      });
+    });
 });
 
 const PORT = 3000;
