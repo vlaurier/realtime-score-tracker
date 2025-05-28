@@ -154,7 +154,16 @@ io.on('connection', (socket) => {
     });
 
     socket.on('join_match', (matchId) => {
-      socket.join(matchId);
+        socket.join(matchId);
+        // Recalcule et envoie le score actuel à ce nouveau client
+        const data = matchData[matchId];
+        if (data && data.players) {
+            const scores = {};
+            for (const [pid, seq] of Object.entries(data.players)) {
+                scores[pid] = seq.filter(s => s === '✅').length;
+            }
+            socket.emit('score_update', {matchId, scores});
+        }
     });
 
     socket.on('player_correction', ({ matchId, playerId }) => {
@@ -200,6 +209,17 @@ io.on('connection', (socket) => {
     socket.on('get_player_sequence', ({ matchId, playerId }) => {
       const sequence = matchData[matchId]?.players?.[playerId] || [];
       socket.emit('player_sequence_data', { matchId, playerId, sequence });
+    });
+
+    socket.on('get_player_sequences', (matchId) => {
+      const data = matchData[matchId];
+      if (!data || !data.players) return;
+
+      // Envoie toutes les séquences à ce client
+      socket.emit('player_sequences', {
+        matchId,
+        sequences: data.players  // { playerId: ['✅', '❌', ...] }
+      });
     });
 });
 

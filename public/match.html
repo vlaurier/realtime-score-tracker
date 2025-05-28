@@ -201,12 +201,22 @@
 
     const playerScores = {}; // { playerId: ['✅', '✅', '❌'] }
 
+    const initialPlayerId = urlParams.get('player');
+    if (initialPlayerId) {
+      activePlayerId = initialPlayerId;
+      scoreControls.classList.add('active');
+      document.getElementById('numericKeyboard').style.display = 'grid';
+      updateKeyboardEnabledState();
+      renderPlayerActions(); // pour afficher la séquence
+    }
+
     // Initialement désactive tous les boutons du clavier
     document.querySelectorAll('.numeric-keyboard button').forEach(btn => btn.disabled = true);
 
     socket.emit('get_match_players', matchId);
     socket.emit('get_match_info', matchId);
     socket.emit('join_match', matchId);
+    socket.emit('get_player_sequences', matchId);
 
     socket.on('match_players', ({ matchId: receivedId, players: playerList }) => {
       if (receivedId !== matchId) return;
@@ -256,6 +266,17 @@
       }
     });
 
+    socket.on('player_sequences', ({ matchId: receivedId, sequences }) => {
+      if (receivedId !== matchId) return;
+
+      // 🔄 Remplit playerScores pour chaque joueur
+      Object.entries(sequences).forEach(([playerId, sequence]) => {
+        playerScores[playerId] = [...sequence];
+      });
+
+      renderPlayerActions(); // pour afficher le bon historique du joueur actif
+    });
+
     function renderPlayerButtons() {
       playerButtonsDiv.innerHTML = '';
       players.sort((a, b) => a.name.localeCompare(b.name));
@@ -268,6 +289,10 @@
           btn.classList.add('active');
         }
         btn.onclick = () => {
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.set('player', player.id);
+          window.history.replaceState({}, '', newUrl);
+
           socket.emit('get_player_sequence', { matchId, playerId: player.id });
           if (activePlayerId === player.id) {
             activePlayerId = null;
@@ -281,6 +306,7 @@
             updateKeyboardEnabledState();
           }
           renderPlayerButtons();
+          renderPlayerActions();
         };
         playerButtonsDiv.appendChild(btn);
       });
