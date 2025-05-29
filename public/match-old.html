@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Match en cours</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 0; }
+    header {
+      position: sticky; top: 0;
+      background: #333; color: #fff;
+      padding: 1rem; display: flex; gap: 1rem;
+    }
+    header a {
+      color: #fff; text-decoration: none;
+    }
+    .player-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      padding: 1rem;
+      gap: 0.5rem;
+    }
+    .player-button {
+      padding: 0.5rem 1rem;
+      border: 1px solid #aaa;
+      background: #f0f0f0;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .player-button.active {
+      background: #4CAF50;
+      color: white;
+      font-weight: bold;
+    }
+    .score-controls {
+      padding: 1rem;
+      display: none;
+    }
+    .score-controls.active {
+      display: block;
+    }
+
+    .numeric-keyboard {
+      display: grid;
+      grid-template-columns: repeat(3, 80px);
+      gap: 0.5rem;
+      justify-content: center;
+      margin-top: 1rem;
+    }
+
+    .numeric-keyboard button {
+      font-size: 1.5rem;
+      padding: 1rem;
+      border-radius: 8px;
+      border: 1px solid #aaa;
+      background: #f9f9f9;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .numeric-keyboard button:hover {
+      background: #e0e0e0;
+    }
+
+    .numeric-keyboard .fail {
+      background: #f8d7da;
+      color: #721c24;
+      border-color: #f5c6cb;
+    }
+
+    .numeric-keyboard .fail:hover {
+      background: #f1b0b7;
+    }
+
+    .numeric-keyboard button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .player-action-temp {
+      color: #333;
+      opacity: 0.4;
+      font-weight: bold;
+      font-size: 1.2rem;
+      margin-left: 0.2rem;
+    }
+
+    .player-action-confirmed {
+      background-color: #2e7d32;
+      color: white;
+      font-weight: bold;
+      border-radius: 12px;
+      padding: 0.2rem 0.6rem;
+      margin-left: 0.3rem;
+      display: inline-block;
+    }
+  </style>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <header>
+    <a href="/">🏠 Accueil</a>
+    <a href="/players.html">👥 Participants</a>
+  </header>
+
+  <div class="player-buttons" id="playerButtons"></div>
+
+  <div id="countdownContainer" style="text-align:center; margin: 2rem 0;">
+    <button id="countdownButton"
+            style="font-size: 3rem; padding: 1rem 2rem; cursor: not-allowed;"
+            disabled>
+      🕒 00:00
+    </button>
+  </div>
+
+  <div id="finalizeContainer" style="text-align:center; margin: 1rem; display: none;">
+    <button id="finalizeButton"
+            style="padding: 1rem 2rem; font-size: 1.2rem; background: #333; color: white; border: none; border-radius: 6px; cursor: pointer;">
+      ✅ Valider les résultats
+    </button>
+  </div>
+
+  <div id="scoreboard" style="margin: 2rem 1rem;">
+    <h2>Classement temporaire</h2>
+    <table id="scoreTable" style="border-collapse: collapse; width: 100%;">
+      <thead>
+        <tr>
+          <th style="text-align:left;">#</th>
+          <th style="text-align:left;">Joueur</th>
+          <th style="text-align:right;">Score</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+
+  <div id="autoFailNotice" style="
+    display: none;
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    padding: 1rem;
+    text-align: center;
+    margin: 1rem;
+    font-weight: bold;
+    border-radius: 8px;">
+    Si la série est arrêtée par le temps, retirer la dernière croix ajoutée automatiquement
+  </div>
+
+
+  <div class="score-controls" id="scoreControls">
+    <h2 id="activePlayerName"></h2>
+    <div id="playerActions" style="font-size: 1.5rem; margin-top: 1rem;"></div>
+    <div id="correctionContainer" style="margin-top: 1rem; display: none;">
+      <button id="undoButton"
+              style="padding: 0.5rem 1rem; font-size: 1rem; background: #eee; border: 1px solid #ccc; border-radius: 6px; cursor: pointer;">
+        🔙 Effacer la dernière saisie
+      </button>
+    </div>
+  </div>
+
+  <div class="numeric-keyboard" id="numericKeyboard" style="display: none;">
+    <button data-key="1">1</button>
+    <button data-key="2">2</button>
+    <button data-key="3">3</button>
+    <button data-key="4">4</button>
+    <button data-key="5">5</button>
+    <button data-key="6">6</button>
+    <button data-key="7">7</button>
+    <button data-key="8">8</button>
+    <button data-key="9">9</button>
+    <button data-key="0">0</button>
+    <button data-key="fail" class="fail" id="failButton" style="grid-column: span 2;">❌</button>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const matchId = urlParams.get('id');
+    const socket = io();
+
+    const playerButtonsDiv = document.getElementById('playerButtons');
+    const scoreControls = document.getElementById('scoreControls');
+    const activePlayerName = document.getElementById('activePlayerName');
+    const countdownButton = document.getElementById('countdownButton');
+    const correctionContainer = document.getElementById('correctionContainer');
+    const undoButton = document.getElementById('undoButton');
+    const failButton = document.getElementById('failButton');
+    const autoFailNotice = document.getElementById('autoFailNotice');
+    const finalizeContainer = document.getElementById('finalizeContainer');
+    const finalizeButton = document.getElementById('finalizeButton');
+
+    let activePlayerId = null;
+    let players = [];
+
+    let matchFinished = false;
+    let matchStartedAt = null;
+    let matchDuration = null;
+    let countdownInterval = null;
+    let numberBuffer = '';
+    let bufferTimer = null;
+
+    const playerScores = {}; // { playerId: ['✅', '✅', '❌'] }
+
+    const initialPlayerId = urlParams.get('player');
+    if (initialPlayerId) {
+      activePlayerId = initialPlayerId;
+      scoreControls.classList.add('active');
+      document.getElementById('numericKeyboard').style.display = 'grid';
+      updateKeyboardEnabledState();
+      renderPlayerActions(); // pour afficher la séquence
+    }
+
+    // Initialement désactive tous les boutons du clavier
+    document.querySelectorAll('.numeric-keyboard button').forEach(btn => btn.disabled = true);
+
+    socket.emit('get_match_players', matchId);
+    socket.emit('get_match_info', matchId);
+    socket.emit('join_match', matchId);
+    socket.emit('get_player_sequences', matchId);
+
+    socket.on('match_players', ({ matchId: receivedId, players: playerList }) => {
+      if (receivedId !== matchId) return;
+      players = playerList;
+      renderPlayerButtons();
+    });
+
+    socket.on('match_players_updated', ({ matchId: updatedId, players: updatedPlayers }) => {
+      if (updatedId !== matchId) return;
+      players = updatedPlayers.map(name => ({ id: name, name }));
+      renderPlayerButtons();
+    });
+
+    socket.on('match_info', (match) => {
+      matchDuration = match.duration;
+      if (match.started && match.startedAt) {
+        matchStartedAt = match.startedAt;
+        startCountdown();
+      } else {
+        updateCountdownDisplay(match.duration * 60 * 1000);
+        enableCountdownButton();
+      }
+    });
+
+    socket.on('match_started', ({ matchId: startedId, startedAt }) => {
+      if (startedId !== matchId) return;
+      matchStartedAt = startedAt;
+      startCountdown();
+    });
+
+    socket.on('score_update', ({ matchId: receivedId, scores }) => {
+      if (receivedId !== matchId) return;
+      renderScoreboard(scores);
+    });
+
+    socket.on('match_finalized', ({ matchId: finalizedId }) => {
+      if (finalizedId !== matchId) return;
+      matchFinished = true;
+      disableInputsAfterFinalization();
+    });
+
+    socket.on('player_sequence_data', ({ matchId: mid, playerId, sequence }) => {
+      if (mid !== matchId) return;
+      playerScores[playerId] = [...sequence];
+      if (playerId === activePlayerId) {
+        renderPlayerActions();
+      }
+    });
+
+    socket.on('player_sequences', ({ matchId: receivedId, sequences }) => {
+      if (receivedId !== matchId) return;
+
+      // 🔄 Remplit playerScores pour chaque joueur
+      Object.entries(sequences).forEach(([playerId, sequence]) => {
+        playerScores[playerId] = [...sequence];
+      });
+
+      renderPlayerActions(); // pour afficher le bon historique du joueur actif
+    });
+
+    function renderPlayerButtons() {
+      playerButtonsDiv.innerHTML = '';
+      players.sort((a, b) => a.name.localeCompare(b.name));
+
+      players.forEach(player => {
+        const btn = document.createElement('button');
+        btn.textContent = player.name;
+        btn.className = 'player-button';
+        if (player.id === activePlayerId) {
+          btn.classList.add('active');
+        }
+        btn.onclick = () => {
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.set('player', player.id);
+          window.history.replaceState({}, '', newUrl);
+
+          socket.emit('get_player_sequence', { matchId, playerId: player.id });
+          if (activePlayerId === player.id) {
+            activePlayerId = null;
+            scoreControls.classList.remove('active');
+            document.getElementById('numericKeyboard').style.display = 'none';
+          } else {
+            activePlayerId = player.id;
+            activePlayerName.textContent = player.name;
+            scoreControls.classList.add('active');
+            document.getElementById('numericKeyboard').style.display = 'grid';
+            updateKeyboardEnabledState();
+          }
+          renderPlayerButtons();
+          renderPlayerActions();
+        };
+        playerButtonsDiv.appendChild(btn);
+      });
+    }
+
+    function enableCountdownButton() {
+      countdownButton.disabled = false;
+      countdownButton.style.cursor = 'pointer';
+      countdownButton.onclick = () => {
+        socket.emit('start_match', matchId);
+      };
+    }
+
+    function updateCountdownDisplay(msRemaining) {
+      const minutes = Math.floor(msRemaining / 60000);
+      const seconds = Math.floor((msRemaining % 60000) / 1000);
+      countdownButton.textContent = `🕒 ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    function updateKeyboardEnabledState() {
+      const isEnabled = matchStartedAt !== null;
+      document.querySelectorAll('.numeric-keyboard button').forEach(btn => {
+        btn.disabled = !isEnabled;
+      });
+    }
+
+    document.querySelectorAll('.numeric-keyboard button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!activePlayerId) return;
+
+        const key = btn.dataset.key;
+        if (!playerScores[activePlayerId]) {
+          playerScores[activePlayerId] = [];
+        }
+
+        if (key === 'fail') {
+          // ❌ est immédiat, on vide le buffer
+          clearTimeout(bufferTimer);
+          numberBuffer = '';
+          playerScores[activePlayerId].push('❌');
+          renderPlayerActions();
+            // 🔁 Envoi immédiat au serveur pour prise en compte
+          socket.emit('player_sequence', {
+            matchId,
+            playerId: activePlayerId,
+            sequence: ['❌']
+          });
+          return;
+        }
+
+        // Ajout d'un chiffre au buffer
+        numberBuffer += key;
+        renderPlayerActions(); // 🔁 pour montrer le buffer en direct
+
+        // Annule l’ancien timer
+        if (bufferTimer) clearTimeout(bufferTimer);
+
+        failButton.disabled = true;
+
+        // Démarre un nouveau timer de 2s pour valider la série
+        bufferTimer = setTimeout(() => {
+          const count = parseInt(numberBuffer);
+          const sequence = [];
+          if (!isNaN(count) && count > 0) {
+            for (let i = 0; i < count; i++) {
+              playerScores[activePlayerId].push('✅');
+              sequence.push('✅');
+            }
+
+            // ✅ Ajout automatique d'une ❌
+            playerScores[activePlayerId].push('❌');
+            sequence.push('❌');
+          }
+
+          numberBuffer = '';
+          bufferTimer = null;
+          failButton.disabled = false;
+          renderPlayerActions();
+
+          // 🔁 Envoi au serveur
+          socket.emit('player_sequence', {
+            matchId,
+            playerId: activePlayerId,
+            sequence
+          });
+        }, 2000);
+      });
+    });
+
+    function startCountdown() {
+      countdownButton.disabled = true;
+      countdownButton.style.cursor = 'not-allowed';
+      updateCountdown();
+      countdownInterval = setInterval(updateCountdown, 1000);
+      updateKeyboardEnabledState();
+    }
+
+    function updateCountdown() {
+      const now = Date.now();
+      const end = matchStartedAt + matchDuration * 60 * 1000;
+      const remaining = Math.max(0, end - now);
+
+      const minutes = Math.floor(remaining / 60000);
+      const seconds = Math.floor((remaining % 60000) / 1000);
+
+      countdownButton.textContent = `🕒 ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+      if (remaining <= 0) {
+        clearInterval(countdownInterval);
+        countdownButton.textContent = '⏰ Temps écoulé';
+        updateKeyboardEnabledState();
+
+        // 🔴 Affiche la notice pendant 30s
+        autoFailNotice.style.display = 'block';
+        setTimeout(() => {
+          autoFailNotice.style.display = 'none';
+          finalizeContainer.style.display = 'block';
+        }, 30000);
+      }
+    }
+    function renderPlayerActions() {
+      const container = document.getElementById('playerActions');
+      if (!activePlayerId || !playerScores[activePlayerId]) {
+        container.textContent = '';
+        correctionContainer.style.display = 'none';
+        return;
+      }
+
+      const history = playerScores[activePlayerId];
+      const chunks = [];
+      let streak = 0;
+
+      history.forEach(entry => {
+        if (entry === '✅') {
+          streak++;
+        } else if (entry === '❌') {
+          if (streak > 0) {
+            chunks.push(`<span class="player-action-confirmed">${streak}</span>`);
+            streak = 0;
+          }
+          chunks.push(`<span style="color: red;">❌</span>`);
+        }
+      });
+
+      if (streak > 0) {
+        chunks.push(`<span class="player-action-confirmed">${streak}</span>`);
+      }
+
+      // 🔍 Ajout du buffer visuel si présent
+      if (numberBuffer.length > 0) {
+        chunks.push(`<span class="player-action-temp">${numberBuffer}</span>`);
+      }
+
+      container.innerHTML = chunks.join(' ');
+
+      correctionContainer.style.display = history.length > 0 ? 'block' : 'none';
+    }
+
+    undoButton.addEventListener('click', () => {
+      if (!activePlayerId || !playerScores[activePlayerId] || playerScores[activePlayerId].length === 0) return;
+
+      const history = playerScores[activePlayerId];
+
+      if (history[history.length - 1] === '❌') {
+        // Dernier élément = échec
+        history.pop();
+      } else {
+        // Dernier élément = série de ✅ → on supprime jusqu’à rencontrer un ❌ ou début
+        while (history.length > 0 && history[history.length - 1] === '✅') {
+          history.pop();
+        }
+      }
+      socket.emit('player_correction', {
+        matchId,
+        playerId: activePlayerId
+      });
+
+      renderPlayerActions();
+    });
+
+    function renderScoreboard(scores) {
+      const tbody = document.querySelector('#scoreTable tbody');
+      tbody.innerHTML = '';
+
+      // Convertir objet en tableau et trier par score décroissant
+      const sorted = Object.entries(scores)
+        .sort(([, a], [, b]) => b - a);
+
+      sorted.forEach(([player, score], index) => {
+        const tr = document.createElement('tr');
+
+        const rankTd = document.createElement('td');
+        rankTd.textContent = index + 1;
+
+        const nameTd = document.createElement('td');
+        nameTd.textContent = player;
+
+        const scoreTd = document.createElement('td');
+        scoreTd.textContent = score;
+        scoreTd.style.textAlign = 'right';
+
+        tr.appendChild(rankTd);
+        tr.appendChild(nameTd);
+        tr.appendChild(scoreTd);
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    finalizeButton.addEventListener('click', () => {
+      if (confirm("Êtes-vous sûr de vouloir valider les résultats ? Cette action est irréversible.")) {
+        socket.emit('finalize_match', matchId);
+      }
+    });
+
+    function disableInputsAfterFinalization() {
+      finalizeContainer.style.display = 'none';
+      document.getElementById('numericKeyboard').style.display = 'none';
+      correctionContainer.style.display = 'none';
+      scoreControls.classList.remove('active');
+    }
+
+  </script>
+</body>
+</html>
