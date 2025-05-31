@@ -85,103 +85,159 @@ button:hover {
     margin-bottom: 0.5rem;
 }
 
-    .sequence-container {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 4px;
-      margin: 0.5rem;
-    }
-    .sequence-item {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      font-size: 1rem;
-    }
-    .sequence-item.success {
-      background: #2e7d32;
-      color: white;
-    }
-    .sequence-item.fail {
-      background: #d32f2f;
-      color: white;
-    }
-    .sequence-item.temp {
-      opacity: 0.5;
-      background: #999;
-      color: white;
-    }
-    .sequence-correct-button {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      font-size: 1.2rem;
-      border: none;
-      background: #666;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-    }
+#countdownButton.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
 
+.sequence-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+    margin: 0.5rem;
+}
 
-    .numeric-keyboard {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0.5rem;
-      max-width: 300px;
-      margin: 1rem auto;
-    }
-    .numeric-keyboard button {
-      padding: 1rem;
-      font-size: 1.4rem;
-      border-radius: 8px;
-      border: none;
-      background: #f0f0f0;
-      cursor: pointer;
-    }
-    .numeric-keyboard button.fail {
-      background: #f8d7da;
-      color: #721c24;
-    }
+.sequence-item {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1rem;
+}
 
-    .scoreboard {
-      margin: 2rem 1rem 4rem 1rem;
-    }
-    .scoreboard table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    .scoreboard td {
-      padding: 0.5rem;
-      border-bottom: 1px solid #ddd;
-    }
-    .scoreboard tr:nth-child(odd) {
-      background: #f9f9f9;
-    }
-    .scoreboard tr.active {
-      background: #ffebee;
-      font-weight: bold;
-    }
+.sequence-item.success {
+    background: #2e7d32;
+    color: white;
+}
 
-    .validate-button {
-      display: block;
-      margin: 1rem auto;
-      padding: 0.8rem 1.2rem;
-      background: #ff2d55;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      font-weight: bold;
-      font-size: 1.1rem;
-      cursor: pointer;
-      width: auto;
+.sequence-item.fail {
+    background: #444;
+    color: white;
+}
+
+.sequence-item.temp {
+    opacity: 0.5;
+    background: #999;
+    color: white;
+}
+
+.sequence-correct-button {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    border: none;
+    background: #666;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+/* === Main animée pour suggérer un clic === */
+.hint-hand {
+    font-size: 2rem;
+    text-align: center;
+    animation: bounce 1.5s infinite;
+    margin-top: 1rem;
+    color: #666;
+}
+
+@keyframes bounce {
+    0%, 100% {
+        transform: translateY(0);
     }
+    50% {
+        transform: translateY(-6px);
+    }
+}
+
+/* === Clavier numérique condensé === */
+.numeric-keyboard {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.4rem;
+    max-width: 300px;
+    margin: 1rem auto;
+}
+
+.numeric-keyboard button {
+    padding: 0.9rem;
+    font-size: 1.3rem;
+    border-radius: 8px;
+    border: none;
+    background: #bbb; /* plus foncé que #f0f0f0 */
+    color: #111;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.numeric-keyboard button:hover {
+    background: #999;
+}
+
+.numeric-keyboard button:disabled {
+    opacity: 0.6;
+    background: #ddd;
+    cursor: not-allowed;
+}
+
+.numeric-keyboard button.fail {
+    background: #444; /* gris foncé */
+    color: white;
+}
+
+.numeric-keyboard button:hover {
+    background: #ddd;
+}
+
+.numeric-keyboard button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.scoreboard {
+    margin: 2rem 1rem 4rem 1rem;
+}
+
+.scoreboard table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.scoreboard td {
+    padding: 0.5rem;
+    border-bottom: 1px solid #ddd;
+}
+
+.scoreboard tr:nth-child(odd) {
+    background: #f9f9f9;
+}
+
+.scoreboard tr.active {
+    background: #ffebee;
+    font-weight: bold;
+}
+
+.validate-button {
+    display: block;
+    margin: 1rem auto;
+    padding: 0.8rem 1.2rem;
+    background: #ff2d55;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: bold;
+    font-size: 1.1rem;
+    cursor: pointer;
+    width: auto;
+}
 
 .player-button:hover {
     background: #333;
@@ -191,12 +247,12 @@ button:hover {
     background: #ff2d55;
 }
 
-    hr.section-separator {
-      margin: 0.5rem auto;
-      width: 90%;
-      border: none;
-      border-top: 1px solid #ccc;
-    }
+hr.section-separator {
+    margin: 0.5rem auto;
+    width: 90%;
+    border: none;
+    border-top: 1px solid #ccc;
+}
 
 .action-button {
     padding: 1rem;
@@ -257,3 +313,5 @@ footer .back-button {
 footer .back-button span {
     margin-left: 0.4rem;
 }
+
+

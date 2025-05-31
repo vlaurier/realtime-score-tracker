@@ -16,14 +16,21 @@
   </header>
 
   <div class="player-buttons" id="playerButtons"></div>
+  <div class="hint-hand" id="hintHand" style="display:none;">👉</div>
+
+  <hr class="section-separator">
+
+  <div id="statusContainer" class="status-container">
+    <!-- Chronomètre ou bouton de validation -->
+  </div>
 
   <hr class="section-separator">
 
   <div id="sequenceArea" class="sequence-container">
-    <!-- Séquence dynamique + bouton correction -->
+    <!-- Séquence dynamique -->
   </div>
 
-  <div class="numeric-keyboard" id="numericKeyboard" style="display: none;">
+  <div class="numeric-keyboard" id="numericKeyboard">
     <button data-key="1">1</button>
     <button data-key="2">2</button>
     <button data-key="3">3</button>
@@ -35,10 +42,6 @@
     <button data-key="9">9</button>
     <button data-key="0">0</button>
     <button class="fail" id="failButton" data-key="fail">❌</button>
-  </div>
-
-  <div id="statusContainer" class="status-container">
-    <!-- Chronomètre OU bouton de validation ici -->
   </div>
 
   <div class="scoreboard" id="scoreboard">
