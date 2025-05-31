@@ -12,7 +12,7 @@ let players = [];
 let activePlayerId = null; // Aucun joueur sélectionné par défaut
 let numberBuffer = "";
 let bufferTimer = null;
-const playerSequences = {}; // { playerId: [✔✔❌] }
+const playerSequences = {}; // { playerId: [✅✅❌] }
 
 // DOM elements
 const playerButtonsDiv = document.getElementById("playerButtons");
@@ -24,19 +24,19 @@ const failButton = document.getElementById("failButton");
 const notification = document.getElementById("notification");
 const matchTitle = document.getElementById("matchTitle");
 
-// Indice visuel pour inviter à cliquer
+// 👉 Main animée
 const hintHand = document.createElement("div");
 hintHand.innerHTML = "👉";
 hintHand.className = "hint-hand";
-playerButtonsDiv.appendChild(hintHand);
+hintHand.id = "hintHand";
 
-// Fetch initial match info
+// Initial socket fetch
 socket.emit("get_match_info", matchId);
 socket.emit("get_match_players", matchId);
 socket.emit("get_player_sequences", matchId);
 socket.emit("join_match", matchId);
 
-// Event listeners
+// Events
 socket.on("match_info", (match) => {
   matchDuration = match.duration;
   if (match.name) matchTitle.textContent = match.name;
@@ -47,6 +47,7 @@ socket.on("match_info", (match) => {
   } else {
     renderCountdown(match.duration * 60 * 1000);
   }
+  renderPlayerButtons(); // important pour afficher main ou pas
 });
 
 socket.on("match_players", ({ matchId: id, players: p }) => {
@@ -64,7 +65,7 @@ socket.on("match_players_updated", ({ matchId: id, players: p }) => {
 socket.on("match_started", ({ matchId: id, startedAt }) => {
   if (id !== matchId) return;
   matchStartedAt = startedAt;
-  hintHand.style.display = "none";
+  renderPlayerButtons(); // important pour cacher main
   startCountdown();
 });
 
@@ -87,6 +88,7 @@ socket.on("score_update", ({ matchId: id, scores }) => {
 function renderPlayerButtons() {
   playerButtonsDiv.innerHTML = "";
   players.sort((a, b) => a.name.localeCompare(b.name));
+
   players.forEach(player => {
     const btn = document.createElement("button");
     btn.textContent = player.name;
@@ -94,13 +96,18 @@ function renderPlayerButtons() {
     if (player.id === activePlayerId) btn.classList.add("active");
     btn.onclick = () => {
       activePlayerId = player.id;
-      hintHand.style.display = "none";
       renderPlayerButtons();
       renderSequence();
     };
     playerButtonsDiv.appendChild(btn);
   });
-  if (!matchStartedAt) playerButtonsDiv.appendChild(hintHand);
+
+  // 👉 Ajoute la main uniquement si aucun joueur sélectionné et match non démarré
+  const shouldShowHand = !activePlayerId && !matchStartedAt;
+  if (shouldShowHand) {
+    playerButtonsDiv.prepend(hintHand);
+  }
+
   numericKeyboard.style.display = "grid";
   updateKeyboardState();
 }
@@ -114,7 +121,7 @@ function renderSequence() {
 
   let streak = 0;
   seq.forEach(mark => {
-    if (mark === "✔") {
+    if (mark === "✅") {
       streak++;
     } else {
       if (streak > 0) {
@@ -153,7 +160,7 @@ function renderSequence() {
       if (last === "❌") {
         seq.pop();
       } else {
-        while (seq.length && seq[seq.length - 1] === "✔") {
+        while (seq.length && seq[seq.length - 1] === "✅") {
           seq.pop();
         }
       }
@@ -219,6 +226,7 @@ function renderScoreboard(scores) {
   });
 }
 
+// Clavier numérique
 numericKeyboard.querySelectorAll("button").forEach(btn => {
   btn.onclick = () => handleKeyPress(btn.dataset.key || btn.textContent);
 });
@@ -244,7 +252,7 @@ function handleKeyPress(key) {
   bufferTimer = setTimeout(() => {
     const n = parseInt(numberBuffer);
     const added = [];
-    for (let i = 0; i < n; i++) added.push("✔");
+    for (let i = 0; i < n; i++) added.push("✅");
     added.push("❌");
     playerSequences[activePlayerId].push(...added);
     socket.emit("player_sequence", { matchId, playerId: activePlayerId, sequence: added });
