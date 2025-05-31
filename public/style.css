@@ -7,20 +7,35 @@ body {
 }
 
 header {
-    background: #111;
-    color: white;
-    text-align: center;
-    padding: 1rem;
+  background: #111;
+  color: white;
+  padding: 1rem;
+  position: relative;
+  text-align: center;
+}
+
+#backButton {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  font-size: 1.2rem;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  text-align: left;
 }
 
 header h1 {
-    margin: 0;
-    font-size: 1.5rem;
+  font-size: 1.2rem;
+  margin: 0;
+  display: inline-block;
 }
 
-header .logo::before {
-    content: "🏁";
+header #backButton::before {
+    content: "🏠";
     font-size: 1.5rem;
+    vertical-align: baseline;
 }
 
 header .logo::after {
@@ -82,7 +97,7 @@ button:hover {
     font-weight: bold;
     cursor: pointer;
     width: auto;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.2rem;
 }
 
 #countdownButton.disabled {
@@ -95,7 +110,6 @@ button:hover {
     flex-wrap: wrap;
     justify-content: center;
     gap: 4px;
-    margin: 0.5rem;
 }
 
 .sequence-item {
@@ -162,13 +176,14 @@ button:hover {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 0.4rem;
+    padding: 0.5rem;
     max-width: 300px;
     margin: 1rem auto;
 }
 
 .numeric-keyboard button {
-    padding: 0.9rem;
-    font-size: 1.3rem;
+    padding: 0.6rem;
+    font-size: 1rem;
     border-radius: 8px;
     border: none;
     background: #bbb; /* plus foncé que #f0f0f0 */
@@ -176,6 +191,7 @@ button:hover {
     font-weight: bold;
     cursor: pointer;
     transition: background 0.2s;
+    margin-bottom: 0.1rem;
 }
 
 .numeric-keyboard button:hover {
@@ -285,33 +301,3 @@ hr {
     border-top: 1px solid #ccc;
     margin: 1.5rem 0 0.5rem 0;
 }
-
-footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: #111;
-    color: white;
-    font-size: 1rem;
-    padding: 0.5rem 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-}
-
-footer .back-button {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 1.2rem;
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-}
-
-footer .back-button span {
-    margin-left: 0.4rem;
-}
-
-

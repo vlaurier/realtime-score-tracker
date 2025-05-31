@@ -8,8 +8,9 @@
   <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-  <header>
-    <h1>Nouvelle Classic Race</h1>
+ <header>
+    <button id="backButton" onclick="location.href='/'">Accueil</button>
+    <h1 class="logo" id="matchTitle">Nouvelle Classic Race</h1>
   </header>
 
   <main>
@@ -23,12 +24,6 @@
       <button type="submit">Créer et démarrer le match</button>
     </form>
   </main>
-
-  <footer>
-    <button class="back-button" onclick="location.href='/'">
-      ↩<span>Retour</span>
-    </button>
-  </footer>
 
   <script>
     const socket = io();
