@@ -32,12 +32,6 @@ header h1 {
   display: inline-block;
 }
 
-header #backButton::before {
-    content: "🏠";
-    font-size: 1.5rem;
-    vertical-align: baseline;
-}
-
 header .logo::after {
     content: "🏁";
     font-size: 1.5rem;
@@ -318,4 +312,8 @@ hr {
 .match-link:hover {
   background: #ff2d55;
   color: white;
+}
+
+#matchForm input[type="number"] {
+  max-width: 96%;
 }
