@@ -12,39 +12,61 @@ const TITLE_MAP = {
 
 pageTitle.textContent = TITLE_MAP[statusFilter] || "Liste des Classic Races";
 
+let allMatches = [];
+let matchPlayersMap = {}; // matchId → [noms]
+
+socket.emit("get_all_match_players");
 socket.on("matches", (matches) => {
-    const now = Date.now();
-    const filtered = matches.filter(match => {
-        if (statusFilter === "active") {
-            return !match.finished;
-        } else if (statusFilter === "finished") {
-            return match.finished;
-        } else {
-            return true;
-        }
-    });
+  allMatches = matches;
+  renderMatches(); // on attend que matchPlayersMap soit rempli aussi
+});
+socket.on("all_match_players", (data) => {
+  matchPlayersMap = data;
+  renderMatches(); // une fois qu’on a les joueurs, on peut afficher
+});
 
-    matchList.innerHTML = "";
+function renderMatches() {
+  const now = Date.now();
+  const filtered = allMatches.filter(match => {
+    if (statusFilter === "active") {
+      return !match.finished;
+    } else if (statusFilter === "finished") {
+      return match.finished;
+    } else {
+      return true;
+    }
+  });
 
-    if (filtered.length === 0) {
-        emptyMessage.textContent = "Aucun match trouvé.";
-        return;
+  matchList.innerHTML = "";
+
+  if (filtered.length === 0) {
+    emptyMessage.textContent = "Aucun match trouvé.";
+    return;
+  }
+
+  emptyMessage.textContent = "";
+
+  filtered.forEach(match => {
+    const li = document.createElement("li");
+    li.className = "match-item";
+
+    const btn = document.createElement("button");
+    btn.className = "match-link";
+    btn.textContent = match.name;
+    btn.onclick = () => {
+      window.location.href = `/match.html?id=${match.id}`;
+    };
+
+    li.appendChild(btn);
+
+    const players = matchPlayersMap[match.id] || [];
+    if (players.length > 0) {
+      const p = document.createElement("div");
+      p.className = "match-players";
+      p.textContent = `👥 ${players.join(", ")}`;
+      li.appendChild(p);
     }
 
-    emptyMessage.textContent = "";
-
-    filtered.forEach(match => {
-      const li = document.createElement("li");
-      li.className = "match-item";
-
-      const btn = document.createElement("button");
-      btn.className = "match-link";
-      btn.textContent = match.name;
-      btn.onclick = () => {
-        window.location.href = `/match.html?id=${match.id}`;
-      };
-
-      li.appendChild(btn);
-      matchList.appendChild(li);
-    });
-});
+    matchList.appendChild(li);
+  });
+}

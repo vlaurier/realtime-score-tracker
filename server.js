@@ -65,6 +65,14 @@ io.on('connection', (socket) => {
         socket.emit('players_updated', players);
     });
 
+    socket.on('get_all_match_players', () => {
+      const all = {};
+      for (const matchId in matchPlayers) {
+        all[matchId] = matchPlayers[matchId];
+      }
+      socket.emit('all_match_players', all);
+    });
+
     socket.on('add_player_to_match', ({matchId, playerName}, ack) => {
         if (!matchId || !playerName) return;
 
