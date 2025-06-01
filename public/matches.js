@@ -34,10 +34,17 @@ socket.on("matches", (matches) => {
     emptyMessage.textContent = "";
 
     filtered.forEach(match => {
-        const li = document.createElement("li");
-        li.textContent = match.name;
-        li.style.padding = "0.5rem 1rem";
-        li.style.borderBottom = "1px solid #ccc";
-        matchList.appendChild(li);
+      const li = document.createElement("li");
+      li.className = "match-item";
+
+      const btn = document.createElement("button");
+      btn.className = "match-link";
+      btn.textContent = match.name;
+      btn.onclick = () => {
+        window.location.href = `/match.html?id=${match.id}`;
+      };
+
+      li.appendChild(btn);
+      matchList.appendChild(li);
     });
 });

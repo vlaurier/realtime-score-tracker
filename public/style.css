@@ -301,3 +301,26 @@ hr {
     border-top: 1px solid #ccc;
     margin: 1.5rem 0 0.5rem 0;
 }
+
+.match-item {
+  list-style: none;
+  margin: 0.5rem 0;
+}
+
+.match-link {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1rem;
+  font-weight: bold;
+  background: #fff;
+  border: 2px solid #ff2d55;
+  color: #ff2d55;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.match-link:hover {
+  background: #ff2d55;
+  color: white;
+}
