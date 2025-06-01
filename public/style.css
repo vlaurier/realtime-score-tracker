@@ -75,11 +75,13 @@ button:hover {
 }
 
 .player-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    justify-content: center;
-    margin: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin: 1rem;
+  min-height: 2.5rem; /* Hauteur suffisante pour inclure les boutons + la main */
+  position: relative;
 }
 
 .player-button {
@@ -149,10 +151,10 @@ button:hover {
 
 /* === Main animée pour suggérer un clic === */
 .hint-hand {
-    font-size: 2rem;
+    font-size: 1.5rem;
     text-align: center;
     animation: bounce 1.5s infinite;
-    margin-top: 1rem;
+    margin-top: 0.5rem;
     color: #666;
 }
 
