@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Classic Races</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="./style.css" />
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="./matches.js" defer></script>
+</head>
+<body>
+  <header>
+    <button id="backButton" onclick="location.href='/'">Accueil</button>
+    <h1 class="logo" id="pageTitle">Liste des Classic Races</h1>
+  </header>
+
+  <main>
+    <ul id="matchList" style="list-style: none; padding: 0;"></ul>
+    <p id="emptyMessage" style="text-align: center; color: #666;"></p>
+  </main>
+</body>
+</html>
