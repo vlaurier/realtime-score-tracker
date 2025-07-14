@@ -319,3 +319,38 @@ hr {
 #matchForm input[type="number"] {
   max-width: 96%;
 }
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.success-action, .fail-action {
+  padding: 0.8rem 1.2rem;
+  font-size: 1.2rem;
+  font-weight: bold;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.success-action {
+  background: #2e7d32;
+  color: white;
+}
+
+.success-action:hover {
+  background: #1b5e20;
+}
+
+.fail-action {
+  background: #b71c1c;
+  color: white;
+}
+
+.fail-action:hover {
+  background: #8e0000;
+}
