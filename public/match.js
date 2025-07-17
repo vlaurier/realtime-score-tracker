@@ -16,7 +16,6 @@ const playerSequences = {}; // { playerId: [✅✅❌] }
 
 // DOM elements
 const playerButtonsDiv = document.getElementById("playerButtons");
-const numericKeyboard = document.getElementById("numericKeyboard");
 const sequenceArea = document.getElementById("sequenceArea");
 const statusContainer = document.getElementById("statusContainer");
 const scoreTable = document.getElementById("scoreTable");
@@ -111,9 +110,6 @@ function renderPlayerButtons() {
     playerButtonsDiv.prepend(hintHand);
   }
 
-  numericKeyboard.style.display = "grid";
-  updateKeyboardState();
-
   // 🔘 Afficher ou cacher les boutons "Réussi" / "Manqué"
   const showActions = !!activePlayerId && !!matchStartedAt && !matchFinished;
   actionButtonsDiv.style.display = showActions ? "flex" : "none";
@@ -200,12 +196,6 @@ function renderSequence() {
   sequenceArea.appendChild(container);
 }
 
-
-function updateKeyboardState() {
-  const disabled = !matchStartedAt || matchFinished;
-  numericKeyboard.querySelectorAll("button").forEach(btn => btn.disabled = disabled);
-}
-
 function renderCountdown(ms) {
   const minutes = Math.floor(ms / 60000).toString().padStart(2, "0");
   const seconds = Math.floor((ms % 60000) / 1000).toString().padStart(2, "0");
@@ -218,7 +208,6 @@ function renderCountdown(ms) {
 function startCountdown() {
   updateCountdown();
   countdownInterval = setInterval(updateCountdown, 1000);
-  updateKeyboardState();
 }
 
 function updateCountdown() {
@@ -254,11 +243,6 @@ function renderScoreboard(scores) {
     tbody.appendChild(tr);
   });
 }
-
-// Clavier numérique
-numericKeyboard.querySelectorAll("button").forEach(btn => {
-  btn.onclick = () => handleKeyPress(btn.dataset.key || btn.textContent);
-});
 
 function handleKeyPress(key) {
   if (!activePlayerId || matchFinished || !matchStartedAt) return;
