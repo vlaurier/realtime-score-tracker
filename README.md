@@ -60,7 +60,7 @@ Elle permet de définir la durée d'un match, les participants, de rentrer les s
 - **WebSocket** via [Socket.IO](https://socket.io/)
 - **Vanilla JS** (aucune dépendance frontend)
 - **CSS minimaliste** responsive
-- Données **en mémoire uniquement** (pas de base de données)
+- Données stockées via des fichiers en json (pas de base de données)
 
 ---
 
@@ -73,24 +73,42 @@ npm install
 npx nodemon server.js
 ```
 
-## ⚠️ Limites actuelles (MVP)
+## Instructions d'implémentation
 
-- Les données (joueurs, matchs, scores) sont perdues au redémarrage.
-- Pas de gestion d’erreurs serveur ni de validation renforcée.
-- Pas de tests.
-
-## Prochaines étapes envisagées
-
-Fonctionnelles : 
-
-- Correction des bugs et amélioration du parcours utilisateur.
-- Améliorer le tableau des résultats par des statistiques.
-- Ajouter une notion de handicap.
-
-Techniques :
-
-- Améliorer la testabilité et la couverture fonctionnelle.
-- Ajouter une base de données persistante (SQLite, PostgreSQL…).
+- L'application doit être responsive et adaptée à une visualisation sur smartphone.
+- une barre d'entête est présente sur toutes les pages. Elle reste visible même en scrollant.
+- elle contient de façon centrée le titre de la page que l'on visite
+- une barre de pied de page, visible sur toutes les pages (sauf l'accueil) contient de façon centrée une petite icône d'une ferrari avec l'intitulé "Menu" qui redirige vers la page d'accueil
+- la page d'accueil est un empilement de liens sous forme de boutons : "Créer une Classic Race", "Classic races à jouer", "Résultats", "Enregistrer un nouveau joueur".
+- le lien "Enregistrer un nouveau joueur" mène à la page players.html
+- la page players.html a pour titre 'Liste des participants' et propose un formulaire avec un champ unique "Nom du joueur" et un bouton "Ajouter".
+- Sous ce formulaire apparaît après une délimitation horizontale la liste des joueurs enregistrés par ordre alphabétique.
+- Les joueurs sont sauvegardés dans un fichier players.json qui est trié à chaque ajout de joueurs afin d'être utilisable tel quel
+- la page new_match.html propose un formulaire avec : Durée (en minutes) et un multiselect "Sélectionner les joueurs" puis un bouton "Créer le match"
+- elle renvoie directement sur la page du match crée
+- la page match.html a pour titre Math du "dd/MM/YYYY HH:mm" avec la date de création du match
+- elle affiche un bouton avec un chronomètre non démarré dont la valeur est la durée renseignée préalablement
+- elle liste ensuite les joueurs participants sous forme de boutons cliquables
+- au clic sur un joueur l'application fait apparaître deux boutons "manqué" et "réussi" pour enregistrer les succès ou échec successifs d'un joueur
+- qu'importe le joueur, les boutons sont grisés tant que l'on n'a pas cliqué sur le bouton chronomètre pour lancer le compte à rebours
+- au lancement du chronomètre, les boutons deviennent cliquables pour tous les joueurs, mais seuls les boutons du joueur que l'on sélectionne sont visibles
+- on peut changer de joueur en cliquant sur le bouton correspondant. on peut alors enregister ses échecs et succès.
+- cliquer sur les boutons "manqué" ou "réussi" va progressivement faire apparaître sous les boutons en question une séquence
+- un premier clic sur "manqué" fait apparaître une pastille rouge avec un 1 à l'intérieur
+- un second clic incrémente le 1, qui devient 2 et ainsi de suite
+- le fonctionnement est le même pour "réussi", mais un clic fait apparaitre une pastille verte. 5 clics consécutifs feront par exemple apparaître un 5 dans une pastille verte
+- un bouton de correction, lorsqu'il est pressé, décrémente de 1 un score enregistré, que ce soit réussite ou échec
+- exemple : On a les pastilles 3 rouge et 2 vert. Un clic sur le bouton de correction (flèche retour à la fin de la séquence affichée), donnera : 3 rouge 1 vert
+- si on reclic sur la correction, dans la mesure où la valeur dans la pastille vert est 1, cela la fera disparaître. Même chose pour les pastilles rouges. On peut alors tout corriger si l'on veut en décrémentant et en supprimant les pastilles quand le chiffre passe de 1 à 0
+- sous la liste des joueurs (où chaque bouton joueur est attaché à une partie visible/cachable de sa séquence et des boutons pour l'enregistrer) apparaît un classement
+- le classement montre en temps réel le classement des joueurs par ordre croissant de la somme des réussites enregistrées
+- à la fin du chronomètre, un bouton "sauvegarder" apparaît au dessus de la liste des joueurs
+- la sauvegarde d'un match consiste à sauvegarder les séquences pour chaque participants, le classement pouvant être reconstitué à partir de cela
+- la page "matches.html" permet de gérer les éléments du menu "Classic races à jouer"  et "Résultats"
+- elle liste dans le premier cas les matchs qui ne sont pas encore sauvegardés et dans le second les matchs sauvegardés
+- en cliquant sur un match non sauvegardé, on arrive sur la page match avec le comportement décrit plus haut qui permet de saisir les score en temps réel et de suivre le classement
+- en cliquant sur un match sauvegardé, on peut consulter le classement
+- l'ensemble de l'application présente un style dynamique et professionnel qui joue sur l'aspect "course". Le design est épurée avec un rose/rouge qui contraste élégamment avec le gris/noir des boutons non sélectionnés et ou header. 
 
 ## 🙌 Auteurs
 
