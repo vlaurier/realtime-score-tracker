@@ -1,80 +1,43 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Nouvelle Classic Race</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="./style.css">
-  <script src="/socket.io/socket.io.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nouveau Match — Classic Race</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
- <header>
-    <button id="backButton" onclick="location.href='/'">↩</button>
-    <h1 class="logo" id="matchTitle">Nouvelle Classic Race</h1>
+  <header>
+    <h1>Créer une Classic Race</h1>
   </header>
 
-  <main>
-    <form id="matchForm">
-      <label for="duration">Durée (en minutes)</label>
-      <input type="number" id="duration" min="1" max="90" required>
+  <main class="container">
+    <form id="new-match-form" class="form">
+      <label for="duration">Durée du match (minutes)</label>
+      <input type="number" id="duration" name="duration" min="1" max="240" required />
 
       <label for="players">Sélectionner les joueurs</label>
-      <select id="players" multiple required></select>
+      <select id="players" name="players" multiple required>
+        <!-- Options injectées dynamiquement -->
+      </select>
 
-      <button type="submit">Créer le match</button>
+      <button type="submit">Démarrer le match</button>
     </form>
+
+    <div id="loading" style="display: none; text-align: center; margin-top: 20px;">
+      <p>Création du match en cours...</p>
+      <p>Veuillez patienter...</p>
+    </div>
   </main>
 
-  <script>
-    const socket = io();
-    const playerSelect = document.getElementById("players");
-    const form = document.getElementById("matchForm");
+    <footer>
+      <a href="index.html" style="text-decoration: none;">
+        <span style="font-size: 1.5rem;">🏎️ </span>
+        <span style="margin-left: 0.5rem;">Menu</span>
+      </a>
+    </footer>
 
-    // Charger les joueurs
-    socket.emit("get_players");
-    socket.on("players_updated", (players) => {
-      playerSelect.innerHTML = "";
-      players.forEach(player => {
-        const opt = document.createElement("option");
-        opt.value = player;
-        opt.textContent = player;
-        playerSelect.appendChild(opt);
-      });
-    });
-
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-
-      const duration = parseInt(document.getElementById("duration").value);
-      const selectedPlayers = Array.from(playerSelect.selectedOptions).map(opt => opt.value);
-      if (!duration || selectedPlayers.length === 0) return;
-
-      // Nom auto : Match du 24/05/2025 15:32
-      const now = new Date();
-      const dateString = now.toLocaleString("fr-FR", {
-        day: '2-digit', month: '2-digit', year: 'numeric',
-        hour: '2-digit', minute: '2-digit'
-      });
-
-      const matchName = `Match du ${dateString}`;
-
-      // Création du match
-      socket.emit("create_match", { name: matchName, duration });
-
-      socket.once("matches", (matches) => {
-        const created = matches.find(m => m.name === matchName);
-        if (!created) return;
-
-        // Ajouter tous les joueurs au match
-        selectedPlayers.forEach((p, index) => {
-          socket.emit("add_player_to_match", { matchId: created.id, playerName: p }, () => {
-            if (index === selectedPlayers.length - 1) {
-              window.location.href = `/match.html?id=${created.id}&player=${selectedPlayers[0]}`;
-            }
-          });
-        });
-      });
-    });
-  </script>
+  <script src="new_match.js"></script>
 </body>
 </html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Création du match...</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .loader {
+            text-align: center;
+            padding: 20px;
+        }
+        .loader p {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="loader">
+        <h2>Création du match en cours...</h2>
+        <p>Veuillez patienter...</p>
+        <div id="status"></div>
+    </div>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const matchId = params.get('id');
+        const statusDiv = document.getElementById('status');
+
+        async function checkMatch() {
+            try {
+                const response = await fetch(`/match/${matchId}`);
+                if (response.ok) {
+                    window.location.href = `match.html?id=${matchId}`;
+                } else {
+                    throw new Error('Match non trouvé');
+                }
+            } catch (error) {
+                setTimeout(checkMatch, 500);
+            }
+        }
+
+        checkMatch();
+    </script>
+</body>
+</html>

@@ -1,34 +1,22 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Classic Race</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="./style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Accueil — Classic Race</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header>
-    <h1 class="logo">Page d'accueil</h1>
+    <h1>🏁 Classic Race</h1>
   </header>
 
-  <main>
-    <button class="action-button" onclick="location.href='/new_match.html'">
-      ➕ Créer une Classic Race
-    </button>
-
-    <button class="action-button secondary" onclick="location.href='/matches.html?status=active'">
-      🟢 Rejoindre une Classic Race
-    </button>
-
-    <button class="action-button secondary" onclick="location.href='/matches.html?status=finished'">
-      📊 Résultats des Classic Races
-    </button>
-
-    <hr>
-
-    <button class="action-button secondary" onclick="location.href='/players.html'">
-      👤 Enregistrer un nouveau joueur
-    </button>
+  <main class="home-menu">
+    <a href="new_match.html" class="menu-button">Créer une Classic Race</a>
+    <a href="matches.html?status=ongoing" class="menu-button">Classic races à jouer</a>
+    <a href="matches.html?status=completed" class="menu-button">Résultats</a>
+    <a href="players.html" class="menu-button">Enregistrer un nouveau joueur</a>
   </main>
 </body>
 </html>
