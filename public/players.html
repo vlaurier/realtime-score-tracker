@@ -1,67 +1,42 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Participants</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="./style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Participants — Classic Race</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header>
-    <h1 class="logo">Liste des participants</h1>
+    <h1>🏁 Liste des joueurs enregistrés</h1>
   </header>
 
-  <main>
-    <form id="addPlayerForm">
-      <label>
-        Nom du joueur :
-        <input type="text" name="playerName" required
-               style="width: 100%; padding: 0.5rem; margin-top: 0.5rem;">
-      </label>
-      <button type="submit" class="action-button" style="margin-top: 1rem;">Ajouter</button>
+  <main class="container">
+    <form id="add-player-form" class="form">
+      <input
+        type="text"
+        id="player-name"
+        placeholder="Nom du joueur (ex: Julien M)"
+        required
+        pattern="^[A-ZÉÈÀÂÔÎÛa-zéèàâôîû]+ [A-Z]$"
+        title="Format : prénom + initiale du nom (ex: Julien M)"
+      />
+      <button type="submit">Ajouter</button>
     </form>
 
-    <hr>
-
-    <section>
-      <ul id="playerList" style="list-style: none; padding-left: 0; line-height: 1.6;"></ul>
-    </section>
+    <ul id="players-list" class="player-list">
+      <!-- Liste des joueurs injectée ici -->
+    </ul>
   </main>
 
-  <footer>
-    <button class="back-button" onclick="location.href='/'">
-      ↩<span>Retour</span>
-    </button>
-  </footer>
+<footer>
+  <a href="index.html" style="text-decoration: none;">
+    <span style="font-size: 1.5rem;">🏎️ </span>
+    <span style="margin-left: 0.5rem;">Menu</span>
+  </a>
+</footer>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
-    const form = document.getElementById('addPlayerForm');
-    const list = document.getElementById('playerList');
-
-    function refreshPlayerList(players) {
-      list.innerHTML = '';
-      players.sort((a, b) => a.localeCompare(b)).forEach(name => {
-        const li = document.createElement('li');
-        li.textContent = name;
-        list.appendChild(li);
-      });
-    }
-
-    socket.emit('get_players');
-    socket.on('players_updated', refreshPlayerList);
-
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const input = form.playerName;
-      const name = input.value.trim();
-      if (name) {
-        socket.emit('add_player', name);
-        input.value = '';
-        input.focus();
-      }
-    });
-  </script>
+  <script src="players.js"></script>
 </body>
 </html>
