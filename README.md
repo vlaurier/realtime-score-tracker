@@ -128,24 +128,7 @@ npx nodemon server.js
 - Clic sur un match terminé → consultation du classement statique reconstitué
 
 ### 💾 Persistance
-- `players.json` : liste triée des noms uniques
-- `matches.json` : liste des métadonnées de tous les matchs (UUID, date, durée, joueurs, statut)
-- Chaque match est stocké dans `/matches/match-UUID.json` avec la structure :
-
-```json
-{
-  "id": "uuid",
-  "createdAt": "2025-07-17T14:00:00.000Z",
-  "duration": 30,
-  "players": ["Alice B", "Julien M"],
-  "sequences": {
-    "Alice B": ["+3", "-1", "+2", "-1"],
-    "Julien M": ["+1", "+1", "-2"]
-  },
-  "status": "ongoing" | "completed",
-  "startTimestamp": "2025-07-17T14:05:00.000Z"
-}
-```
+- Le stockage des données se fait avec SQlite.
 
 - Seules les pastilles vertes (succès, notées +x) comptent dans le score final
 - Les pastilles rouges (-x) sont affichées pour information mais ne retirent pas de points
@@ -161,7 +144,7 @@ npx nodemon server.js
 - Design épuré et dynamique inspiré de la course
 - Couleurs : rose/rouge vif, gris foncé/noir pour les éléments inactifs
 - Contraste marqué, lisibilité mobile optimisée
-- L’icône Ferrari est intégrée dans le pied de page (à fournir si nécessaire)
+- L’icône Ferrari est intégrée dans le pied de page
 
 ## 🙌 Auteurs
 
