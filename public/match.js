@@ -230,51 +230,56 @@ function renderSequences() {
     const zone = document.createElement("div");
     zone.className = "sequence";
 
-    // Process sequence in sections, each miss starts a new section
-    let sections = []; // Array to store each section's hits
-    let currentSection = [];
-    
-    // First, split sequence into sections based on misses
+    // Séparer en sections de réussites et d’échecs successifs
+    let sections = [];
+    let current = [];
+    let currentType = null; // "hit" ou "miss"
+
     seq.forEach(code => {
       if (typeof code !== "string") return;
-      
+
       if (code.startsWith("+")) {
-        currentSection.push(parseInt(code.slice(1), 10) || 0);
-      } else {
-        if (currentSection.length > 0) {
-          sections.push({hits: currentSection, total: currentSection.reduce((a, b) => a + b, 0)});
+        // Succès
+        const points = parseInt(code.slice(1), 10) || 0;
+        if (currentType !== "hit" && current.length > 0) {
+          sections.push({ type: currentType, count: current.length });
+          current = [];
         }
-        sections.push({miss: true});
-        currentSection = [];
+        currentType = "hit";
+        current.push(points);
+      } else if (code === "-0") {
+        // Échec
+        if (currentType !== "miss" && current.length > 0) {
+          sections.push({ type: currentType, count: current.length });
+          current = [];
+        }
+        currentType = "miss";
+        current.push(1);
       }
     });
-    
-    // Add last section if it has hits
-    if (currentSection.length > 0) {
-      sections.push({hits: currentSection, total: currentSection.reduce((a, b) => a + b, 0)});
+
+    if (current.length > 0) {
+      sections.push({ type: currentType, count: current.length });
     }
-    
-    // Render all sections
+
+    // Rendu visuel
     sections.forEach(section => {
-      if (section.miss) {
-        // Add red cross for misses
-        const span = document.createElement("span");
-        span.className = "miss";
-        span.textContent = "✕";
-        zone.appendChild(span);
-      } else {
-        // Add cumulative total for the section
-        const span = document.createElement("span");
+      const span = document.createElement("span");
+      if (section.type === "hit") {
         span.className = "hit";
-        span.textContent = String(section.total);
-        zone.appendChild(span);
+        span.textContent = String(section.count);
+      } else {
+        span.className = "miss";
+        span.textContent = String(section.count);
       }
+      zone.appendChild(span);
     });
 
     div.appendChild(zone);
     sequencesContainer.appendChild(div);
   });
 }
+
 
 function renderRanking() {
   const scores = calculateScores();
