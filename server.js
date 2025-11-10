@@ -367,11 +367,20 @@ app.post("/match/:id", async (req, res) => {
       for (const [player, sequences] of Object.entries(match.sequences)) {
         if (Array.isArray(sequences)) {
           for (const seq of sequences) {
-            const success = seq.startsWith('+');
-            await dbRun(
-              "INSERT INTO sequences (match_id, player_name, timestamp, success) VALUES (?, ?, ?, ?)",
-              [match.id, player, now, success]
-            );
+            if (seq.startsWith('+')) {
+              const count = parseInt(seq.slice(1), 10) || 0;
+              for (let i = 0; i < count; i++) {
+                await dbRun(
+                  "INSERT INTO sequences (match_id, player_name, timestamp, success) VALUES (?, ?, ?, ?)",
+                  [match.id, player, now, true]
+                );
+              }
+            } else if (seq === '-0') {
+              await dbRun(
+                "INSERT INTO sequences (match_id, player_name, timestamp, success) VALUES (?, ?, ?, ?)",
+                [match.id, player, now, false]
+              );
+            }
           }
         }
       }

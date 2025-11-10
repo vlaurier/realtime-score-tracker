@@ -651,3 +651,33 @@ footer span {
   font-size: 1.1rem;
 }
 
+/* Styles for new match page UI */
+.sequence-block {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  cursor: pointer;
+}
+
+.main-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.player-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.small-btn {
+  padding: 0.5rem;
+  font-size: 1rem;
+  min-width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+

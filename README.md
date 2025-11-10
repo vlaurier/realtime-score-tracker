@@ -50,6 +50,7 @@ Elle permet de définir la durée d'un match, les participants, de rentrer les s
 │ ├── matches.js → Logique JS pour la liste des matchs
 ├── server.js → Serveur Express + Socket.IO
 ├── package.json → Dépendances + scripts
+├── scores.db → Base de données SQLite
 ```
 
 ---
@@ -60,12 +61,12 @@ Elle permet de définir la durée d'un match, les participants, de rentrer les s
 - **WebSocket** via [Socket.IO](https://socket.io/)
 - **Vanilla JS** (aucune dépendance frontend)
 - **CSS minimaliste** responsive
-- Données stockées via des fichiers en json (pas de base de données)
+- Données stockées dans une base de données **SQLite**
 
 ---
 
 ## 🧪 Démarrer le projet en local
-[README.md](README.md)
+
 ```bash
 git clone https://github.com/vlaurier/realtime-score-tracker.git
 cd realtime-score-tracker
@@ -90,16 +91,15 @@ npx nodemon server.js
 - Titre : “Liste des participants”
 - Formulaire avec champ unique : `Nom du joueur` + bouton `Ajouter`
 - Format : `prénom espace initiale du nom` (ex : `Julien M`)
-- Pas de doublon possible
-- Les noms sont stockés dans `players.json` **trié par ordre alphabétique**
+- Pas de doublon possible.
+- Les noms sont stockés dans la base de données et triés par ordre alphabétique.
 
 ### 🆕 `new_match.html` — Création d’un match
 - Formulaire avec :
   - Durée (en minutes)
   - Multiselect “Sélectionner les joueurs” (au moins un, sans doublons)
 - À la validation :
-  - Création d’un fichier `matches/match-UUID.json`
-  - Ajout d’une entrée dans `matches.json`
+  - Ajout d’une entrée dans la base de données.
   - Redirection vers `match.html?id=UUID`
 
 ### 🎯 `match.html` — Suivi de match en temps réel
@@ -128,7 +128,12 @@ npx nodemon server.js
 - Clic sur un match terminé → consultation du classement statique reconstitué
 
 ### 💾 Persistance
-- Le stockage des données se fait avec SQlite.
+- Le stockage des données se fait avec **SQLite**.
+- La base de données `scores.db` contient les tables suivantes :
+  - `players`: stocke les noms des joueurs.
+  - `matches`: informations sur les matchs (durée, status, etc.).
+  - `match_players`: table de liaison entre les matchs et les joueurs.
+  - `sequences`: enregistre chaque coup (réussi ou manqué) pour chaque joueur dans un match.
 
 - Seules les pastilles vertes (succès, notées +x) comptent dans le score final
 - Les pastilles rouges (-x) sont affichées pour information mais ne retirent pas de points
@@ -153,9 +158,3 @@ npx nodemon server.js
 ## 🏁 Licence
 
 - MIT — Utilisation libre à condition de mentionner l'auteur.
-
-
-
-
-
-

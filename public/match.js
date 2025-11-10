@@ -1,22 +1,20 @@
-
-
 // Initialiser Socket.IO avec gestion d'erreur et reconnexion
 const socket = io({
   reconnection: true,
   reconnectionAttempts: 5,
-  reconnectionDelay: 1000
+  reconnectionDelay: 1000,
 });
 
-socket.on('connect', () => {
-  console.log('Connecté au serveur Socket.IO');
+socket.on("connect", () => {
+  console.log("Connecté au serveur Socket.IO");
 });
 
-socket.on('connect_error', (error) => {
-  console.error('Socket.IO connection error:', error);
+socket.on("connect_error", (error) => {
+  console.error("Socket.IO connection error:", error);
 });
 
-socket.on('disconnect', () => {
-  console.log('Déconnecté du serveur Socket.IO');
+socket.on("disconnect", () => {
+  console.log("Déconnecté du serveur Socket.IO");
 });
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -26,16 +24,16 @@ const isReadOnly = urlParams.get("view") === "readonly";
 const titleEl = document.getElementById("page-title");
 const chronoEl = document.getElementById("chrono");
 const startBtn = document.getElementById("start-btn");
-const playersContainer = document.getElementById("players");
 const sequencesContainer = document.getElementById("sequences");
 const rankingEl = document.getElementById("ranking");
 const saveBtn = document.getElementById("save-btn");
 
 let matchData;
-let selectedPlayer = null;
+let selectedPlayer = null; // Garde une trace du joueur sélectionné localement
 let localSequences = {};
 let chronoInterval = null;
 
+// Charger les données initiales du match
 async function loadMatchData() {
   try {
     const response = await fetch(`/match/${matchId}`);
@@ -43,19 +41,29 @@ async function loadMatchData() {
       throw new Error(`Erreur ${response.status} lors du chargement du match`);
     }
     matchData = await response.json();
+    localSequences = JSON.parse(JSON.stringify(matchData.sequences || {}));
+
     updateTitle();
-    renderPlayers();
-    socket.emit('join', matchId);
+    renderAllSequences(); // Fonction initiale pour tout construire
+    renderRanking();
+    updateControls();
+
+    if (matchData.startTimestamp) {
+      startBtn.style.display = "none";
+      if (!chronoInterval) chronoInterval = setInterval(updateChrono, 1000);
+      updateChrono();
+    }
+
+    socket.emit("join", matchId);
   } catch (error) {
-    console.error('Erreur lors du chargement du match:', error);
-    alert('Impossible de charger les données du match. Veuillez rafraîchir la page.');
+    console.error("Erreur lors du chargement du match:", error);
+    alert("Impossible de charger les données du match. Veuillez rafraîchir la page.");
   }
 }
 
 function formatDateTime(isoStr) {
   if (!isoStr) return "Date inconnue";
   const d = new Date(isoStr);
-  if (isNaN(d.getTime())) return "Date invalide";
   return d.toLocaleString("fr-FR", {
     day: "2-digit",
     month: "2-digit",
@@ -70,134 +78,56 @@ function updateTitle() {
   titleEl.textContent = `Match du ${dt}`;
 }
 
-function renderPlayers() {
-  playersContainer.innerHTML = "";
-  matchData.players.forEach((name) => {
-    const btn = document.createElement("button");
-    btn.textContent = name;
-    btn.className = name === selectedPlayer ? "player-btn selected" : "player-btn";
-    btn.onclick = () => {
-      // Retirer la classe selected de tous les boutons
-      document.querySelectorAll('.player-btn').forEach(b => b.classList.remove('selected'));
-      // Ajouter la classe au bouton cliqué
-      btn.classList.add('selected');
-      // Mettre à jour les séquences
-      document.querySelectorAll('.sequence-block').forEach(block => {
-        if (block.getAttribute('data-player') === name) {
-          block.classList.add('active');
-          block.classList.remove('inactive');
-        } else {
-          block.classList.add('inactive');
-          block.classList.remove('active');
-        }
-      });
-      selectedPlayer = name;
-      updateControls();
-    };
-    playersContainer.appendChild(btn);
-  });
-}
-
 function calculateScores() {
-  return matchData.players.map(player => {
+  return matchData.players.map((player) => {
     const sequences = localSequences[player] || [];
     let total = 0;
     let currentSection = 0;
-    
-    if (!Array.isArray(sequences)) {
-      console.error('Invalid sequences for player', player, ':', sequences);
-      return { player, score: 0 };
-    }
-    
     for (const code of sequences) {
-      if (typeof code !== 'string') {
-        console.error('Invalid sequence code:', code);
-        continue;
-      }
-      
-      try {
-        if (code.startsWith("+")) {
-          const points = parseInt(code.slice(1), 10);
-          if (!isNaN(points)) {
-            currentSection += points;
-          }
-        } else if (code === "-0") {
-          total += currentSection;
-          currentSection = 0;
-        }
-      } catch (error) {
-        console.error('Error processing sequence code:', code, error);
-        continue;
+      if (code.startsWith("+")) {
+        currentSection += parseInt(code.slice(1), 10);
+      } else if (code === "-0") {
+        total += currentSection;
+        currentSection = 0;
       }
     }
-    
-    // Add final section if not ended with a miss
     total += currentSection;
-    console.log(`Final score for ${player}:`, total);
-    
     return { player, score: total };
   });
 }
 
 function updateControls() {
-  // Récupérer les éléments du DOM avec vérification de leur existence
-  const elements = {
-    actionZone: document.getElementById("actions"),
-    chronoZone: document.getElementById("chrono-container"),
-    startBtn: document.getElementById("start-btn"),
-    saveBtn: document.getElementById("save-btn")
-  };
+  const hasStarted = !!matchData.startTimestamp;
+  startBtn.style.display = hasStarted ? "none" : "block";
 
-  // Vérifier chaque élément avant de l'utiliser
-  for (const [key, element] of Object.entries(elements)) {
-    if (!element) {
-      console.warn(`Element '${key}' not found in DOM`);
+  document.querySelectorAll(".sequence-block").forEach((block) => {
+    const player = block.dataset.player;
+    const isActive = player === selectedPlayer;
+    const actionButtons = block.querySelector(".player-actions");
+
+    if (isActive && hasStarted && !isReadOnly) {
+      block.classList.add("active");
+      block.classList.remove("inactive");
+      if (actionButtons) actionButtons.style.display = "flex";
+    } else {
+      block.classList.remove("active");
+      block.classList.add("inactive");
+      if (actionButtons) actionButtons.style.display = "none";
     }
-  }
-
-  if (isReadOnly || matchData.status === "completed") {
-    // Mode lecture seule : cacher les contrôles
-    if (elements.actionZone) elements.actionZone.style.display = "none";
-    if (elements.startBtn) elements.startBtn.style.display = "none";
-    if (elements.saveBtn) elements.saveBtn.style.display = "none";
-    
-    // Garder le chrono visible pour afficher "Match terminé"
-    if (elements.chronoZone) elements.chronoZone.style.display = "block";
-  } else {
-    // Mode normal
-    const hasStarted = !!matchData.startTimestamp;
-
-    if (elements.actionZone) {
-      elements.actionZone.style.display = selectedPlayer && hasStarted ? "block" : "none";
-    }
-
-    if (elements.chronoZone) {
-      elements.chronoZone.style.display = hasStarted ? "block" : "none";
-    }
-
-    if (elements.startBtn) {
-      elements.startBtn.style.display = hasStarted ? "none" : "block";
-    }
-  }
+  });
 }
 
 function updateChrono() {
   if (!matchData.startTimestamp) return;
-  
+
   const start = new Date(matchData.startTimestamp);
   const now = new Date();
   const elapsed = Math.floor((now - start) / 1000);
   const remaining = matchData.duration * 60 - elapsed;
 
-  // Mettre à jour le bouton de sauvegarde
   if (saveBtn) {
-    if (remaining <= 0) {
-      saveBtn.disabled = false;
-      saveBtn.classList.remove("disabled");
-    } else {
-      saveBtn.disabled = true;
-      saveBtn.classList.add("disabled");
-    }
+    saveBtn.disabled = remaining > 0;
+    saveBtn.classList.toggle("disabled", remaining > 0);
   }
 
   if (remaining <= 0) {
@@ -214,72 +144,106 @@ function updateChrono() {
   chronoEl.textContent = `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-function renderSequences() {
-  sequencesContainer.innerHTML = "";
+// Met à jour uniquement la visualisation de la séquence d'un joueur
+function updatePlayerSequence(player) {
+    const block = sequencesContainer.querySelector(`.sequence-block[data-player="${player}"]`);
+    if (!block) return;
 
-  matchData.players.forEach((player) => {
-    const div = document.createElement("div");
-    div.className = `sequence-block ${player === selectedPlayer ? 'active' : 'inactive'}`;
-    div.setAttribute('data-player', player);
+    const sequenceZone = block.querySelector(".sequence");
+    if (!sequenceZone) return;
 
-    const name = document.createElement("h3");
-    name.textContent = player;
-    div.appendChild(name);
-
+    sequenceZone.innerHTML = ""; // On vide juste la zone de séquence
     const seq = localSequences[player] || [];
-    const zone = document.createElement("div");
-    zone.className = "sequence";
-
-    // Séparer en sections de réussites et d’échecs successifs
+    
     let sections = [];
     let current = [];
-    let currentType = null; // "hit" ou "miss"
+    let currentType = null;
 
     seq.forEach(code => {
-      if (typeof code !== "string") return;
+      const type = code.startsWith("+") ? "hit" : "miss";
+      const value = type === "hit" ? parseInt(code.slice(1), 10) : 1;
 
-      if (code.startsWith("+")) {
-        // Succès
-        const points = parseInt(code.slice(1), 10) || 0;
-        if (currentType !== "hit" && current.length > 0) {
-          sections.push({ type: currentType, count: current.length });
-          current = [];
-        }
-        currentType = "hit";
-        current.push(points);
-      } else if (code === "-0") {
-        // Échec
-        if (currentType !== "miss" && current.length > 0) {
-          sections.push({ type: currentType, count: current.length });
-          current = [];
-        }
-        currentType = "miss";
-        current.push(1);
+      if (currentType !== type && current.length > 0) {
+        sections.push({ type: currentType, count: current.reduce((a, b) => a + b, 0) });
+        current = [];
       }
+      currentType = type;
+      current.push(value);
     });
 
     if (current.length > 0) {
-      sections.push({ type: currentType, count: current.length });
+      sections.push({ type: currentType, count: current.reduce((a, b) => a + b, 0) });
     }
 
-    // Rendu visuel
     sections.forEach(section => {
       const span = document.createElement("span");
-      if (section.type === "hit") {
-        span.className = "hit";
-        span.textContent = String(section.count);
-      } else {
-        span.className = "miss";
-        span.textContent = String(section.count);
-      }
-      zone.appendChild(span);
+      span.className = section.type;
+      span.textContent = String(section.count);
+      sequenceZone.appendChild(span);
     });
-
-    div.appendChild(zone);
-    sequencesContainer.appendChild(div);
-  });
 }
 
+// Construit l'intégralité des blocs de joueurs (appelé une seule fois)
+function renderAllSequences() {
+  sequencesContainer.innerHTML = "";
+
+  matchData.players.forEach((player) => {
+    const block = document.createElement("div");
+    block.className = "sequence-block";
+    block.dataset.player = player;
+    
+    // La sélection se fait sur tout le bloc
+    block.onclick = () => {
+      if (matchData.status !== 'completed' && !isReadOnly) {
+        selectedPlayer = player;
+        updateControls();
+      }
+    };
+
+    const mainInfo = document.createElement("div");
+    mainInfo.className = "main-info";
+
+    const name = document.createElement("h3");
+    name.textContent = player;
+    mainInfo.appendChild(name);
+
+    const sequenceZone = document.createElement("div");
+    sequenceZone.className = "sequence";
+    mainInfo.appendChild(sequenceZone);
+    block.appendChild(mainInfo);
+
+    // Boutons d'action par joueur
+    const actions = document.createElement("div");
+    actions.className = "player-actions";
+    actions.style.display = "none";
+
+    const hitBtn = document.createElement("button");
+    hitBtn.textContent = "✅";
+    hitBtn.className = "success-btn small-btn";
+    hitBtn.onclick = (e) => { e.stopPropagation(); pushSequence(player, "hit"); };
+    actions.appendChild(hitBtn);
+
+    const missBtn = document.createElement("button");
+    missBtn.textContent = "❌";
+    missBtn.className = "error-btn small-btn";
+    missBtn.onclick = (e) => { e.stopPropagation(); pushSequence(player, "miss"); };
+    actions.appendChild(missBtn);
+
+    const undoBtn = document.createElement("button");
+    undoBtn.textContent = "↩️";
+    undoBtn.className = "secondary-btn small-btn";
+    undoBtn.onclick = (e) => { e.stopPropagation(); undoLast(player); };
+    actions.appendChild(undoBtn);
+
+    block.appendChild(actions);
+    sequencesContainer.appendChild(block);
+
+    // Rendu initial de la séquence
+    updatePlayerSequence(player);
+  });
+
+  updateControls();
+}
 
 function renderRanking() {
   const scores = calculateScores();
@@ -293,134 +257,97 @@ function renderRanking() {
   });
 }
 
-async function pushSequence(type) {
-  if (!selectedPlayer) return;
+async function pushSequence(player, type) {
+  if (!player) return;
 
-  try {
-    // Initialiser la séquence du joueur si elle n'existe pas
-    if (!localSequences[selectedPlayer]) {
-      localSequences[selectedPlayer] = [];
+  if (!localSequences[player]) localSequences[player] = [];
+  
+  const sequence = localSequences[player];
+  const last = sequence[sequence.length - 1];
+
+  if (type === "hit") {
+    if (last && last.startsWith("+")) {
+      const count = parseInt(last.slice(1)) + 1;
+      sequence[sequence.length - 1] = `+${count}`;
+    } else {
+      sequence.push("+1");
     }
-    
-    // Vérifier que la séquence est bien un tableau
-    if (!Array.isArray(localSequences[selectedPlayer])) {
-      console.error('Invalid sequence structure for player:', selectedPlayer);
-      localSequences[selectedPlayer] = [];
-    }
-
-    const sequence = type === "hit" ? "+1" : "-0";
-    console.log(`Adding sequence for ${selectedPlayer}:`, sequence);
-    
-    localSequences[selectedPlayer].push(sequence);
-
-    // Mettre à jour l'affichage
-    renderSequences();
-    renderRanking();
-    
-    // Émettre la mise à jour pour les autres clients
-    emitUpdate();
-    
-    // Sauvegarder
-    await saveMatch();
-    
-    console.log('Current sequences for', selectedPlayer, ':', localSequences[selectedPlayer]);
-  } catch (error) {
-    console.error('Error in pushSequence:', error);
-    alert('Erreur lors de l\'enregistrement de la séquence. Veuillez réessayer.');
+  } else { // miss
+    sequence.push("-0");
   }
+
+  updatePlayerSequence(player);
+  renderRanking();
+  emitUpdate();
+  await saveMatch();
 }
 
-function undoLast() {
-  if (!selectedPlayer) return;
-  const seq = localSequences[selectedPlayer];
+async function undoLast(player) {
+  if (!player) return;
+  const seq = localSequences[player];
   if (seq && seq.length > 0) {
-    seq.pop();
+    const last = seq[seq.length - 1];
+    if (last.startsWith("+")) {
+      const count = parseInt(last.slice(1));
+      if (count > 1) {
+        seq[seq.length - 1] = `+${count - 1}`;
+      } else {
+        seq.pop();
+      }
+    } else {
+      seq.pop();
+    }
     emitUpdate();
-    renderSequences();
+    updatePlayerSequence(player);
     renderRanking();
+    await saveMatch();
   }
 }
 
-function emitUpdate(type = 'sequences') {
-  // Préparer les données à envoyer selon le type de mise à jour
-  let updateData = {
-    matchId,
-    type,
-    timestamp: new Date().toISOString()
-  };
+function emitUpdate(type = "sequences") {
+  let updateData = { matchId, type, timestamp: new Date().toISOString() };
 
   switch (type) {
-    case 'sequences':
-      // Nettoyer les séquences
-      const cleanSequences = {};
-      for (const [player, sequence] of Object.entries(localSequences)) {
-        if (Array.isArray(sequence)) {
-          cleanSequences[player] = sequence.filter(code => 
-            typeof code === 'string' && (code === '-0' || code.startsWith('+'))
-          );
-        }
-      }
-      updateData.sequences = cleanSequences;
+    case "sequences":
+      updateData.sequences = localSequences;
       break;
-
-    case 'start':
+    case "start":
       updateData.startTimestamp = matchData.startTimestamp;
       break;
-
-    case 'complete':
-      updateData.status = 'completed';
+    case "complete":
+      updateData.status = "completed";
       updateData.sequences = localSequences;
       break;
   }
-
-  console.log('Emitting update:', type, updateData);
   socket.emit("update", updateData);
 }
 
 function applyUpdate(data) {
-  if (!data) {
-    console.error('Invalid update data received');
-    return;
-  }
-
-  console.log('Received update:', data);
+  if (!data) return;
 
   switch (data.type) {
-    case 'sequences':
+    case "sequences":
       if (data.sequences) {
-        for (const [player, sequence] of Object.entries(data.sequences)) {
-          if (Array.isArray(sequence)) {
-            localSequences[player] = sequence.filter(code => 
-              typeof code === 'string' && (code === '-0' || code.startsWith('+'))
-            );
-          }
-        }
-        renderSequences();
+        localSequences = data.sequences;
+        matchData.players.forEach(player => updatePlayerSequence(player));
         renderRanking();
       }
       break;
-
-    case 'start':
+    case "start":
       if (data.startTimestamp) {
         matchData.startTimestamp = data.startTimestamp;
-        matchData.status = 'ongoing';
-        if (!chronoInterval) {
-          chronoInterval = setInterval(updateChrono, 1000);
-        }
+        matchData.status = "ongoing";
+        if (!chronoInterval) chronoInterval = setInterval(updateChrono, 1000);
         updateControls();
         updateChrono();
       }
       break;
-
-    case 'complete':
-      if (data.status === 'completed') {
-        matchData.status = 'completed';
+    case "complete":
+      if (data.status === "completed") {
+        matchData.status = "completed";
         localSequences = data.sequences || {};
-        if (chronoInterval) {
-          clearInterval(chronoInterval);
-          chronoInterval = null;
-        }
-        location.reload(); // Recharger pour afficher le résumé final
+        if (chronoInterval) clearInterval(chronoInterval);
+        location.reload();
       }
       break;
   }
@@ -430,157 +357,51 @@ async function startMatch() {
   try {
     matchData.startTimestamp = new Date().toISOString();
     await saveMatch();
-    
-    // Émettre la mise à jour à tous les clients
-    emitUpdate('start');
-    
-    startBtn.style.display = "none";
+    emitUpdate("start");
     updateControls();
     if (!chronoInterval) chronoInterval = setInterval(updateChrono, 1000);
   } catch (error) {
-    alert("Erreur lors du démarrage du match. Veuillez réessayer.");
+    alert("Erreur lors du démarrage du match.");
     console.error("Start match error:", error);
   }
 }
 
 async function saveMatch() {
   try {
-    // Vérifier et nettoyer les séquences avant l'envoi
-    const cleanedSequences = {};
-    for (const [player, sequences] of Object.entries(localSequences)) {
-      if (Array.isArray(sequences)) {
-        cleanedSequences[player] = sequences.filter(s => 
-          typeof s === 'string' && (s === '-0' || s.startsWith('+'))
-        );
-      }
-    }
-
-    const dataToSave = {
-      ...matchData,
-      sequences: cleanedSequences
-    };
-
-    console.log('Saving match data:', dataToSave);
-
+    const dataToSave = { ...matchData, sequences: localSequences };
     const response = await fetch(`/match/${matchId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(dataToSave)
+      body: JSON.stringify(dataToSave),
     });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const result = await response.json();
-    console.log('Save successful:', result);
-    
-    // Mettre à jour les données locales
-    if (result.sequences) {
-      localSequences = result.sequences;
-      renderSequences();
-      renderRanking();
-    }
-
-    if (result.status === 'completed') {
-      location.reload(); // Recharger la page pour afficher le résumé final
-    }
-
+    if (result.status === "completed") location.reload();
     return result;
   } catch (error) {
-    console.error('Error saving match:', error);
-    throw error; // Propager l'erreur pour la gestion ailleurs
+    console.error("Error saving match:", error);
+    throw error;
   }
 }
 
 // Initialisation
-  fetch(`/match/${matchId}`)
-    .then((res) => res.json())
-    .then((data) => {
-      matchData = data;
-      localSequences = JSON.parse(JSON.stringify(data.sequences || {}));
-      updateTitle();
-      renderPlayers();
-      updateControls();
-      renderSequences();
-      renderRanking();
-      
-      // Si le match est terminé, afficher le résumé
-      if (matchData.status === "completed") {
-        const scores = calculateScores();
-        const winner = scores.sort((a, b) => b.score - a.score)[0];
-        
-        // Vérifier si un résumé existe déjà
-        let summaryDiv = document.querySelector(".match-summary");
-        if (!summaryDiv) {
-          summaryDiv = document.createElement("div");
-          summaryDiv.className = "match-summary";
-          summaryDiv.innerHTML = `
-            <div class="winner-info">${winner.player} remporte le match avec ${winner.score} points</div>
-            <div class="match-date">Joué le ${formatDateTime(matchData.created_at || matchData.createdAt)}</div>
-          `;
-          document.querySelector(".container").insertBefore(summaryDiv, document.querySelector(".container").firstChild);
-        }
+document.addEventListener("DOMContentLoaded", () => {
+  loadMatchData();
 
-        // Afficher "Match terminé" dans le chrono
-        chronoEl.textContent = "Match terminé";
+  startBtn.onclick = startMatch;
+  saveBtn.onclick = async () => {
+    if (!saveBtn.disabled && confirm("Confirmez-vous la sauvegarde du match ? Aucune rectification ne sera possible après.")) {
+      try {
+        document.querySelectorAll('.player-actions').forEach(el => el.style.display = 'none');
+        saveBtn.style.display = "none";
+        matchData.status = "completed";
+        await saveMatch();
+        emitUpdate("complete");
+      } catch (error) {
+        alert("Une erreur est survenue lors de la sauvegarde du match");
       }
-      
-      if (matchData.startTimestamp) {
-      startBtn.style.display = "none";
-      if (!chronoInterval) chronoInterval = setInterval(updateChrono, 1000);
-      updateChrono();
     }
+  };
 
-    socket.emit("join", matchId);
-  });
-
-document.getElementById("hit-btn").onclick = () => pushSequence("hit");
-document.getElementById("miss-btn").onclick = () => pushSequence("miss");
-document.getElementById("undo-btn").onclick = undoLast;
-startBtn.onclick = startMatch;
-saveBtn.onclick = async () => {
-  if (!saveBtn.disabled && confirm("Confirmez-vous la sauvegarde du match ? Aucune rectification ne sera possible après.")) {
-    try {
-      // Cacher immédiatement les contrôles
-      document.getElementById("actions").style.display = "none";
-      saveBtn.style.display = "none";
-      
-      // Mettre à jour l'état
-      matchData.status = "completed";
-      
-      // Sauvegarder et notifier
-      await saveMatch();
-      emitUpdate('complete');
-      
-      // Afficher directement le résumé final sans recharger la page
-      const scores = calculateScores();
-      const winner = scores.sort((a, b) => b.score - a.score)[0];
-      
-      const summaryDiv = document.createElement("div");
-      summaryDiv.className = "match-summary";
-      summaryDiv.innerHTML = `
-        <div class="winner-info">${winner.player} remporte le match avec ${winner.score} points</div>
-        <div class="match-date">Joué le ${formatDateTime(matchData.created_at || matchData.createdAt)}</div>
-      `;
-      
-      // Remplacer tout le contenu existant par le résumé
-      const container = document.querySelector(".container");
-      if (container) {
-        while (container.firstChild) {
-          container.firstChild.remove();
-        }
-        container.appendChild(summaryDiv);
-      }
-      
-      // Mettre à jour le chrono
-      if (chronoEl) chronoEl.textContent = "Match terminé";
-
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error);
-      alert('Une erreur est survenue lors de la sauvegarde du match');
-    }
-  }
-};
-
-socket.on("update", applyUpdate);
+  socket.on("update", applyUpdate);
+});
