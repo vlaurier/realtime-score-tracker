@@ -84,22 +84,76 @@ function calculateScores() {
     let total = 0;
     let currentSection = 0;
     let bestStreak = 0;
-    for (const code of sequences) {
+    let entrySuccesses = 0;
+    let entryFailures = 0;
+
+    // Track if we're in a miss section and if it's the first badge
+    let isFirstBadge = true;
+    let inMissSection = false;
+    let missCount = 0;
+    let hadSuccessBeforeMiss = false; // Track if the miss section follows a success section
+
+    for (let i = 0; i < sequences.length; i++) {
+      const code = sequences[i];
+
       if (code.startsWith("+")) {
+        // Process any pending miss section
+        if (inMissSection && missCount > 0) {
+          if (isFirstBadge) {
+            entryFailures += missCount; // First badge, all count
+          } else if (hadSuccessBeforeMiss) {
+            entryFailures += Math.max(0, missCount - 1); // Subtract 1 for series-ending miss
+          } else {
+            entryFailures += missCount; // Consecutive miss sections, all count
+          }
+          isFirstBadge = false;
+          missCount = 0;
+          inMissSection = false;
+          hadSuccessBeforeMiss = false;
+        }
+
         currentSection += parseInt(code.slice(1), 10);
         if (currentSection > bestStreak) {
           bestStreak = currentSection;
         }
       } else if (code === "-0") {
-        total += currentSection;
-        currentSection = 0;
+        // Start or continue miss section
+        if (!inMissSection) {
+          // Ending a hit section (or starting fresh)
+          total += currentSection;
+          if (currentSection > 0) {
+            entrySuccesses++; // A green badge was created
+            hadSuccessBeforeMiss = true; // This miss section follows a success
+          } else {
+            hadSuccessBeforeMiss = false; // No success before this miss section
+          }
+          currentSection = 0;
+          inMissSection = true;
+        }
+        missCount++;
       }
     }
+
+    // Process any remaining miss section
+    if (inMissSection && missCount > 0) {
+      if (isFirstBadge) {
+        entryFailures += missCount;
+      } else if (hadSuccessBeforeMiss) {
+        entryFailures += Math.max(0, missCount - 1);
+      } else {
+        entryFailures += missCount;
+      }
+    }
+
     total += currentSection;
     if (currentSection > bestStreak) {
       bestStreak = currentSection;
     }
-    return { player, score: total, bestStreak };
+    if (currentSection > 0) {
+      entrySuccesses++; // Count the current ongoing series
+    }
+
+    return { player, score: total, bestStreak, entrySuccesses, entryFailures };
   });
 }
 
@@ -153,41 +207,41 @@ function updateChrono() {
 
 // Met à jour uniquement la visualisation de la séquence d'un joueur
 function updatePlayerSequence(player) {
-    const block = sequencesContainer.querySelector(`.sequence-block[data-player="${player}"]`);
-    if (!block) return;
+  const block = sequencesContainer.querySelector(`.sequence-block[data-player="${player}"]`);
+  if (!block) return;
 
-    const sequenceZone = block.querySelector(".sequence");
-    if (!sequenceZone) return;
+  const sequenceZone = block.querySelector(".sequence");
+  if (!sequenceZone) return;
 
-    sequenceZone.innerHTML = ""; // On vide juste la zone de séquence
-    const seq = localSequences[player] || [];
-    
-    let sections = [];
-    let current = [];
-    let currentType = null;
+  sequenceZone.innerHTML = ""; // On vide juste la zone de séquence
+  const seq = localSequences[player] || [];
 
-    seq.forEach(code => {
-      const type = code.startsWith("+") ? "hit" : "miss";
-      const value = type === "hit" ? parseInt(code.slice(1), 10) : 1;
+  let sections = [];
+  let current = [];
+  let currentType = null;
 
-      if (currentType !== type && current.length > 0) {
-        sections.push({ type: currentType, count: current.reduce((a, b) => a + b, 0) });
-        current = [];
-      }
-      currentType = type;
-      current.push(value);
-    });
+  seq.forEach(code => {
+    const type = code.startsWith("+") ? "hit" : "miss";
+    const value = type === "hit" ? parseInt(code.slice(1), 10) : 1;
 
-    if (current.length > 0) {
+    if (currentType !== type && current.length > 0) {
       sections.push({ type: currentType, count: current.reduce((a, b) => a + b, 0) });
+      current = [];
     }
+    currentType = type;
+    current.push(value);
+  });
 
-    sections.forEach(section => {
-      const span = document.createElement("span");
-      span.className = section.type;
-      span.textContent = String(section.count);
-      sequenceZone.appendChild(span);
-    });
+  if (current.length > 0) {
+    sections.push({ type: currentType, count: current.reduce((a, b) => a + b, 0) });
+  }
+
+  sections.forEach(section => {
+    const span = document.createElement("span");
+    span.className = section.type;
+    span.textContent = String(section.count);
+    sequenceZone.appendChild(span);
+  });
 }
 
 // Construit l'intégralité des blocs de joueurs (appelé une seule fois)
@@ -198,7 +252,7 @@ function renderAllSequences() {
     const block = document.createElement("div");
     block.className = "sequence-block";
     block.dataset.player = player;
-    
+
     // La sélection se fait sur tout le bloc
     block.onclick = () => {
       if (matchData.status !== 'completed' && !isReadOnly) {
@@ -257,29 +311,40 @@ function renderRanking() {
   scores.sort((a, b) => b.score - a.score);
 
   rankingEl.innerHTML = "";
-  
+
   // Create table header
   const thead = document.createElement("thead");
   const headerRow = document.createElement("tr");
   headerRow.innerHTML = `
     <th class="rank-col">#</th>
     <th class="player-col">Joueur</th>
-    <th class="score-col">Points</th>
-    <th class="streak-col">Meilleure série</th>
+    <th class="score-col">Pts</th>
+    <th class="streak-col">Série</th>
+    <th class="entry-col">Entrée</th>
   `;
   thead.appendChild(headerRow);
   rankingEl.appendChild(thead);
-  
+
   // Create table body
   const tbody = document.createElement("tbody");
   scores.forEach((entry, i) => {
     const row = document.createElement("tr");
     if (i === 0) row.classList.add("first-place");
+
+    // Calculate entry point display
+    const totalEntries = entry.entrySuccesses + entry.entryFailures;
+    let entryDisplay = "-";
+    if (totalEntries > 0) {
+      const percentage = Math.round((entry.entrySuccesses / totalEntries) * 100);
+      entryDisplay = `${entry.entrySuccesses}/${totalEntries} ${percentage}%`;
+    }
+
     row.innerHTML = `
       <td class="rank-col">${i + 1}</td>
       <td class="player-col">${entry.player}</td>
       <td class="score-col">${entry.score}</td>
       <td class="streak-col">${entry.bestStreak}</td>
+      <td class="entry-col">${entryDisplay}</td>
     `;
     tbody.appendChild(row);
   });
@@ -290,7 +355,7 @@ async function pushSequence(player, type) {
   if (!player) return;
 
   if (!localSequences[player]) localSequences[player] = [];
-  
+
   const sequence = localSequences[player];
   const last = sequence[sequence.length - 1];
 

@@ -25,32 +25,72 @@ function formatDateTime(isoStr) {
 }
 
 function calculateScore(sequences) {
-  if (!Array.isArray(sequences)) return { score: 0, bestStreak: 0 };
+  if (!Array.isArray(sequences)) return { score: 0, bestStreak: 0, entrySuccesses: 0, entryFailures: 0 };
 
   let total = 0;
   let currentSection = 0;
   let bestStreak = 0;
+  let entrySuccesses = 0;
+  let entryFailures = 0;
+
+  // Track if we're in a miss section and if it's the first badge
+  let isFirstBadge = true;
+  let inMissSection = false;
+  let missCount = 0;
 
   sequences.forEach(code => {
     if (typeof code !== 'string') return;
 
     if (code.startsWith("+")) {
+      // Process any pending miss section
+      if (inMissSection && missCount > 0) {
+        if (isFirstBadge) {
+          entryFailures += missCount; // First badge, all count
+        } else {
+          entryFailures += Math.max(0, missCount - 1); // Subtract 1 for series-ending miss
+        }
+        isFirstBadge = false;
+        missCount = 0;
+        inMissSection = false;
+      }
+
       currentSection += parseInt(code.slice(1), 10);
       if (currentSection > bestStreak) {
         bestStreak = currentSection;
       }
     } else if (code.startsWith("-")) {
-      total += currentSection;
-      currentSection = 0;
+      // Start or continue miss section
+      if (!inMissSection) {
+        // Ending a hit section (or starting fresh)
+        total += currentSection;
+        if (currentSection > 0) {
+          entrySuccesses++; // A green badge was created
+        }
+        currentSection = 0;
+        inMissSection = true;
+      }
+      missCount++;
     }
   });
+
+  // Process any remaining miss section
+  if (inMissSection && missCount > 0) {
+    if (isFirstBadge) {
+      entryFailures += missCount;
+    } else {
+      entryFailures += Math.max(0, missCount - 1);
+    }
+  }
 
   total += currentSection;
   if (currentSection > bestStreak) {
     bestStreak = currentSection;
   }
+  if (currentSection > 0) {
+    entrySuccesses++; // Count the current ongoing series
+  }
 
-  return { score: total, bestStreak };
+  return { score: total, bestStreak, entrySuccesses, entryFailures };
 }
 
 function renderMatch(match) {
@@ -79,7 +119,9 @@ function renderMatch(match) {
         return {
           player,
           score: result.score,
-          bestStreak: result.bestStreak
+          bestStreak: result.bestStreak,
+          entrySuccesses: result.entrySuccesses,
+          entryFailures: result.entryFailures
         };
       })
       .sort((a, b) => b.score - a.score);
@@ -94,8 +136,9 @@ function renderMatch(match) {
     headerRow.innerHTML = `
       <th class="rank">#</th>
       <th class="player">Joueur</th>
-      <th class="score">Points</th>
-      <th class="streak">Meilleure série</th>
+      <th class="score">Pts</th>
+      <th class="streak">Série</th>
+      <th class="entry">Entrée</th>
     `;
     thead.appendChild(headerRow);
     table.appendChild(thead);
@@ -103,12 +146,21 @@ function renderMatch(match) {
     // Add body
     const tbody = document.createElement("tbody");
     playerScores.forEach((entry, index) => {
+      // Calculate entry point display
+      const totalEntries = entry.entrySuccesses + entry.entryFailures;
+      let entryDisplay = "-";
+      if (totalEntries > 0) {
+        const percentage = Math.round((entry.entrySuccesses / totalEntries) * 100);
+        entryDisplay = `${entry.entrySuccesses}/${totalEntries} ${percentage}%`;
+      }
+
       const row = document.createElement("tr");
       row.innerHTML = `
         <td class="rank">${index + 1}</td>
         <td class="player">${entry.player}</td>
         <td class="score">${entry.score} pts</td>
         <td class="streak">${entry.bestStreak}</td>
+        <td class="entry">${entryDisplay}</td>
       `;
       tbody.appendChild(row);
     });

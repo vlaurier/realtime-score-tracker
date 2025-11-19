@@ -170,7 +170,8 @@ footer {
 }
 
 .score-table .score,
-.score-table .streak {
+.score-table .streak,
+.score-table .entry {
   text-align: center;
   color: #f33;
   font-weight: 500;
@@ -617,7 +618,8 @@ footer span {
 }
 
 .ranking-table .score-col,
-.ranking-table .streak-col {
+.ranking-table .streak-col,
+.ranking-table .entry-col {
   text-align: center;
   color: #f33;
   font-weight: 500;
@@ -634,12 +636,14 @@ footer span {
   .ranking-table th,
   .ranking-table td {
     padding: 0.5rem 0.3rem;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
   }
 
   .ranking-table .score-col,
-  .ranking-table .streak-col {
-    width: 70px;
+  .ranking-table .streak-col,
+  .ranking-table .entry-col {
+    width: auto;
+    font-size: 0.8rem;
   }
 }
 
