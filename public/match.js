@@ -83,16 +83,23 @@ function calculateScores() {
     const sequences = localSequences[player] || [];
     let total = 0;
     let currentSection = 0;
+    let bestStreak = 0;
     for (const code of sequences) {
       if (code.startsWith("+")) {
         currentSection += parseInt(code.slice(1), 10);
+        if (currentSection > bestStreak) {
+          bestStreak = currentSection;
+        }
       } else if (code === "-0") {
         total += currentSection;
         currentSection = 0;
       }
     }
     total += currentSection;
-    return { player, score: total };
+    if (currentSection > bestStreak) {
+      bestStreak = currentSection;
+    }
+    return { player, score: total, bestStreak };
   });
 }
 
@@ -250,11 +257,33 @@ function renderRanking() {
   scores.sort((a, b) => b.score - a.score);
 
   rankingEl.innerHTML = "";
+  
+  // Create table header
+  const thead = document.createElement("thead");
+  const headerRow = document.createElement("tr");
+  headerRow.innerHTML = `
+    <th class="rank-col">#</th>
+    <th class="player-col">Joueur</th>
+    <th class="score-col">Points</th>
+    <th class="streak-col">Meilleure série</th>
+  `;
+  thead.appendChild(headerRow);
+  rankingEl.appendChild(thead);
+  
+  // Create table body
+  const tbody = document.createElement("tbody");
   scores.forEach((entry, i) => {
-    const li = document.createElement("li");
-    li.textContent = `${i + 1}. ${entry.player} — ${entry.score} pts`;
-    rankingEl.appendChild(li);
+    const row = document.createElement("tr");
+    if (i === 0) row.classList.add("first-place");
+    row.innerHTML = `
+      <td class="rank-col">${i + 1}</td>
+      <td class="player-col">${entry.player}</td>
+      <td class="score-col">${entry.score}</td>
+      <td class="streak-col">${entry.bestStreak}</td>
+    `;
+    tbody.appendChild(row);
   });
+  rankingEl.appendChild(tbody);
 }
 
 async function pushSequence(player, type) {

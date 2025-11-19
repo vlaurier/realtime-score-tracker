@@ -12,7 +12,7 @@ document.getElementById("page-title").textContent = titleMap[status] || "Matchs"
 function formatDateTime(isoStr) {
   if (!isoStr) return "";
   const d = new Date(isoStr);
-  const dateStr = d.toLocaleDateString('fr-FR', { 
+  const dateStr = d.toLocaleDateString('fr-FR', {
     day: 'numeric',
     month: 'short',
     year: 'numeric'
@@ -25,23 +25,32 @@ function formatDateTime(isoStr) {
 }
 
 function calculateScore(sequences) {
-  if (!Array.isArray(sequences)) return 0;
-  
+  if (!Array.isArray(sequences)) return { score: 0, bestStreak: 0 };
+
   let total = 0;
   let currentSection = 0;
-  
+  let bestStreak = 0;
+
   sequences.forEach(code => {
     if (typeof code !== 'string') return;
-    
+
     if (code.startsWith("+")) {
       currentSection += parseInt(code.slice(1), 10);
+      if (currentSection > bestStreak) {
+        bestStreak = currentSection;
+      }
     } else if (code.startsWith("-")) {
       total += currentSection;
       currentSection = 0;
     }
   });
-  
-  return total + currentSection;
+
+  total += currentSection;
+  if (currentSection > bestStreak) {
+    bestStreak = currentSection;
+  }
+
+  return { score: total, bestStreak };
 }
 
 function renderMatch(match) {
@@ -65,24 +74,45 @@ function renderMatch(match) {
 
     // Calculer et trier les scores
     const playerScores = match.players
-      .map(player => ({
-        player,
-        score: calculateScore(match.sequences[player])
-      }))
+      .map(player => {
+        const result = calculateScore(match.sequences[player]);
+        return {
+          player,
+          score: result.score,
+          bestStreak: result.bestStreak
+        };
+      })
       .sort((a, b) => b.score - a.score);
 
     // Créer le tableau des scores
     const table = document.createElement("table");
     table.className = "score-table";
+
+    // Add header
+    const thead = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+    headerRow.innerHTML = `
+      <th class="rank">#</th>
+      <th class="player">Joueur</th>
+      <th class="score">Points</th>
+      <th class="streak">Meilleure série</th>
+    `;
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    // Add body
+    const tbody = document.createElement("tbody");
     playerScores.forEach((entry, index) => {
       const row = document.createElement("tr");
       row.innerHTML = `
         <td class="rank">${index + 1}</td>
         <td class="player">${entry.player}</td>
         <td class="score">${entry.score} pts</td>
+        <td class="streak">${entry.bestStreak}</td>
       `;
-      table.appendChild(row);
+      tbody.appendChild(row);
     });
+    table.appendChild(tbody);
 
     scoresDiv.appendChild(table);
     a.appendChild(scoresDiv);

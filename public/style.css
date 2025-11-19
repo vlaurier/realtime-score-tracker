@@ -78,6 +78,7 @@ main.container {
     opacity: 0;
     transform: translateY(30px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -131,6 +132,20 @@ footer {
   border-collapse: collapse;
 }
 
+.score-table thead {
+  background: rgba(255, 51, 51, 0.1);
+}
+
+.score-table th {
+  padding: 0.5rem;
+  text-align: left;
+  font-weight: bold;
+  color: #f33;
+  border-bottom: 1px solid rgba(255, 51, 51, 0.3);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
 .score-table tr {
   border-bottom: 1px solid rgba(255, 51, 51, 0.2);
 }
@@ -146,11 +161,19 @@ footer {
 .score-table .rank {
   width: 40px;
   color: #f33;
+  text-align: center;
+  font-weight: bold;
 }
 
-.score-table .score {
-  text-align: right;
+.score-table .player {
+  color: #fff;
+}
+
+.score-table .score,
+.score-table .streak {
+  text-align: center;
   color: #f33;
+  font-weight: 500;
 }
 
 /* Save button states */
@@ -174,7 +197,8 @@ footer {
   background-color: #ff5555;
 }
 
-.save-message, .status-message {
+.save-message,
+.status-message {
   margin-top: 1rem;
   padding: 0.5rem 1rem;
   color: white;
@@ -453,7 +477,8 @@ footer span {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(255, 51, 51, 0.1);
   transition: all 0.3s ease;
-  margin-right: 3px; /* Espace pour la scrollbar */
+  margin-right: 3px;
+  /* Espace pour la scrollbar */
 }
 
 .sequence-block h3 {
@@ -483,11 +508,13 @@ footer span {
 }
 
 .sequence .hit {
-  background-color: #28a745; /* vert */
+  background-color: #28a745;
+  /* vert */
 }
 
 .sequence .miss {
-  background-color: #dc3545; /* rouge */
+  background-color: #dc3545;
+  /* rouge */
 }
 
 
@@ -529,9 +556,10 @@ footer span {
   border-color: rgba(255, 51, 51, 0.3);
 }
 
-.ranking-list {
-  list-style: none;
-  padding: 0;
+/* Ranking table styles */
+.ranking-table {
+  width: 100%;
+  border-collapse: collapse;
   margin: 1rem 0;
   background: rgba(0, 0, 0, 0.2);
   border-radius: 0.5rem;
@@ -539,37 +567,80 @@ footer span {
   overflow: hidden;
 }
 
-.ranking-list li {
-  padding: 0.6rem 1rem;
-  border-bottom: 1px solid rgba(255, 51, 51, 0.1);
-  display: flex;
-  align-items: center;
-  font-size: 1rem;
-  transition: background-color 0.3s ease;
-  position: relative;
+.ranking-table thead {
+  background: rgba(255, 51, 51, 0.15);
 }
 
-.ranking-list li:last-child {
+.ranking-table th {
+  padding: 0.8rem 0.5rem;
+  text-align: left;
+  font-weight: bold;
+  color: #f33;
+  border-bottom: 2px solid rgba(255, 51, 51, 0.3);
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ranking-table tbody tr {
+  border-bottom: 1px solid rgba(255, 51, 51, 0.1);
+  transition: background-color 0.3s ease;
+}
+
+.ranking-table tbody tr:last-child {
   border-bottom: none;
 }
 
-.ranking-list li:first-child {
+.ranking-table tbody tr:hover {
+  background-color: rgba(255, 51, 51, 0.05);
+}
+
+.ranking-table tbody tr.first-place {
   background: rgba(255, 51, 51, 0.1);
   font-weight: bold;
 }
 
-.ranking-list li:first-child::before {
-  content: "🏆";
-  margin-right: 0.5rem;
+.ranking-table td {
+  padding: 0.6rem 0.5rem;
+  font-size: 1rem;
 }
 
-.ranking-list li:hover {
-  background-color: rgba(255, 51, 51, 0.05);
+.ranking-table .rank-col {
+  width: 50px;
+  text-align: center;
+  color: #f33;
+  font-weight: bold;
 }
 
-.ranking li {
-  font-size: 1.1rem;
-  padding: 0.3rem 0;
+.ranking-table .player-col {
+  color: #fff;
+}
+
+.ranking-table .score-col,
+.ranking-table .streak-col {
+  text-align: center;
+  color: #f33;
+  font-weight: 500;
+  width: 100px;
+}
+
+.ranking-table tbody tr.first-place .rank-col::before {
+  content: "🏆 ";
+}
+
+/* Mobile responsiveness for ranking table */
+@media (max-width: 480px) {
+
+  .ranking-table th,
+  .ranking-table td {
+    padding: 0.5rem 0.3rem;
+    font-size: 0.9rem;
+  }
+
+  .ranking-table .score-col,
+  .ranking-table .streak-col {
+    width: 70px;
+  }
 }
 
 .save-section {
@@ -593,7 +664,7 @@ footer span {
   background: #1a1a1a;
   padding: 1rem;
   border-radius: 0.75rem;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
   color: #fff;
   text-decoration: none;
   transition: 0.2s;
@@ -680,4 +751,3 @@ footer span {
   align-items: center;
   justify-content: center;
 }
-
