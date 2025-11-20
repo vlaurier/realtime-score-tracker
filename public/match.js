@@ -192,7 +192,7 @@ function updateChrono() {
   }
 
   if (remaining <= 0) {
-    chronoEl.textContent = "Match terminé";
+    chronoEl.textContent = "Terminé";
     if (chronoInterval) {
       clearInterval(chronoInterval);
       chronoInterval = null;
@@ -264,19 +264,24 @@ function renderAllSequences() {
     const mainInfo = document.createElement("div");
     mainInfo.className = "main-info";
 
+    // Header container for name and actions
+    const headerContainer = document.createElement("div");
+    headerContainer.className = "player-header";
+    headerContainer.style.display = "flex";
+    headerContainer.style.justifyContent = "space-between";
+    headerContainer.style.alignItems = "center";
+    headerContainer.style.width = "100%";
+    headerContainer.style.marginBottom = "0.5rem";
+
     const name = document.createElement("h3");
     name.textContent = player;
-    mainInfo.appendChild(name);
-
-    const sequenceZone = document.createElement("div");
-    sequenceZone.className = "sequence";
-    mainInfo.appendChild(sequenceZone);
-    block.appendChild(mainInfo);
+    name.style.margin = "0"; // Remove default margin
+    headerContainer.appendChild(name);
 
     // Boutons d'action par joueur
     const actions = document.createElement("div");
     actions.className = "player-actions";
-    actions.style.display = "none";
+    actions.style.display = "none"; // Hidden by default
 
     const hitBtn = document.createElement("button");
     hitBtn.textContent = "✅";
@@ -296,7 +301,13 @@ function renderAllSequences() {
     undoBtn.onclick = (e) => { e.stopPropagation(); undoLast(player); };
     actions.appendChild(undoBtn);
 
-    block.appendChild(actions);
+    headerContainer.appendChild(actions);
+    mainInfo.appendChild(headerContainer);
+
+    const sequenceZone = document.createElement("div");
+    sequenceZone.className = "sequence";
+    mainInfo.appendChild(sequenceZone);
+    block.appendChild(mainInfo);
     sequencesContainer.appendChild(block);
 
     // Rendu initial de la séquence
@@ -340,7 +351,7 @@ function renderRanking() {
     }
 
     row.innerHTML = `
-      <td class="rank-col">${i + 1}</td>
+      <td class="rank-col">${i === 0 ? '<span class="trophy-icon">🏆<span class="trophy-text">1</span></span>' : i + 1}</td>
       <td class="player-col">${entry.player}</td>
       <td class="score-col">${entry.score}</td>
       <td class="streak-col">${entry.bestStreak}</td>

@@ -34,6 +34,12 @@ header h1 {
   letter-spacing: 1px;
 }
 
+@media (max-width: 480px) {
+  header h1 {
+    font-size: 1.4rem;
+  }
+}
+
 /* Menu principal */
 main.home-menu {
   margin-top: 6rem;
@@ -472,7 +478,7 @@ footer span {
 }
 
 .sequence-block {
-  background: rgba(27, 27, 27, 0.6);
+  background: rgba(27, 27, 27, 0.9);
   padding: 0.5rem 0.8rem;
   border-radius: 0.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -508,6 +514,16 @@ footer span {
   font-size: 1rem;
 }
 
+@media (max-width: 480px) {
+
+  .sequence .hit,
+  .sequence .miss {
+    width: 28px;
+    height: 28px;
+    font-size: 0.85rem;
+  }
+}
+
 .sequence .hit {
   background-color: #28a745;
   /* vert */
@@ -531,6 +547,14 @@ footer span {
   transition: all 0.3s ease;
 }
 
+@media (max-width: 480px) {
+  .sequence span {
+    width: 26px;
+    height: 26px;
+    font-size: 0.85rem;
+  }
+}
+
 .sequence span.hit {
   background-color: rgba(51, 204, 51, 0.9);
   color: white;
@@ -545,8 +569,8 @@ footer span {
 
 /* Style pour les séquences des joueurs non sélectionnés */
 .sequence-block.inactive {
-  opacity: 0.4;
-  filter: grayscale(50%);
+  opacity: 0.8;
+  filter: grayscale(30%);
 }
 
 /* Animation lors de la sélection d'un joueur */
@@ -627,7 +651,23 @@ footer span {
 }
 
 .ranking-table tbody tr.first-place .rank-col::before {
-  content: "🏆 ";
+  content: "";
+}
+
+.trophy-icon {
+  position: relative;
+  display: inline-block;
+  font-size: 1.5rem;
+}
+
+.trophy-text {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.7rem;
+  color: #000;
+  font-weight: bold;
 }
 
 /* Mobile responsiveness for ranking table */
@@ -739,6 +779,7 @@ footer span {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  width: 100%;
 }
 
 .player-actions {
@@ -754,4 +795,13 @@ footer span {
   display: flex;
   align-items: center;
   justify-content: center;
+  border: none;
+  /* Remove border */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  /* Add shadow */
+}
+
+.small-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
 }
